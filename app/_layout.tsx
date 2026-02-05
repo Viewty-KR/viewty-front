@@ -1,17 +1,17 @@
+import { Ionicons } from "@expo/vector-icons";
 import {
   DarkTheme,
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { Stack, useRouter, useSegments } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import "react-native-reanimated";
-import { useEffect, useState } from "react";
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
 import { useFonts } from "expo-font";
-import { Ionicons } from "@expo/vector-icons";
+import { Stack, useRouter, useSegments } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
+import { Platform } from "react-native";
+import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -24,54 +24,59 @@ SplashScreen.preventAutoHideAsync();
 function InitialLayout() {
   const router = useRouter();
   const segments = useSegments();
-  const [isReady, setReady] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const [loaded] = useFonts({
     ...Ionicons.font,
   });
 
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        let token = null;
-        if (Platform.OS === "web") {
-          token = localStorage.getItem("userToken");
-        } else {
-          token = await SecureStore.getItemAsync("userToken");
-        }
+    // 폰트가 로드되지 않았다면 아무것도 하지 않음
+    if (!loaded) return;
 
-        const inAuthGroup = segments[0] === "auth";
+    performAuthCheck();
+  }, [loaded, segments[0]]); // segments 전체가 아닌 segments[0]만 감지
 
-        if (!token && !inAuthGroup) {
-          router.replace("/auth/login");
-        } else if (token && inAuthGroup) {
-          router.replace("/auth/profile");
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setReady(true);
+  const performAuthCheck = async () => {
+    try {
+      let token = null;
+      if (Platform.OS === "web") {
+        token = localStorage.getItem("userToken");
+      } else {
+        token = await SecureStore.getItemAsync("userToken");
       }
-    }
 
-    if (loaded) {
-      checkAuth();
+      const inAuthGroup = segments[0] === "auth";
+
+      if (!token && inAuthGroup) {
+        // 토큰이 없고, 인증 페이지가 아니라면 -> 로그인으로
+        router.replace("/auth/login");
+      } else if (token && inAuthGroup) {
+        // 토큰이 있고, 로그인 페이지에 있다면 -> 프로필(메인)로
+        router.replace("/auth/profile");
+      }
+    } catch (e) {
+      console.error("Auth Check Failed:", e);
+    } finally {
+      // 체크가 한 번이라도 끝나면 준비 완료 상태로 변경
+      setIsReady(true);
     }
-  }, [loaded, router, segments]);
+  };
 
   useEffect(() => {
-    if (isReady) {
+    // 모든 준비가 끝났을 때만 스플래시 스크린 숨김
+    if (loaded && isReady) {
       SplashScreen.hideAsync();
     }
-  }, [isReady]);
+  }, [loaded, isReady]);
 
-  if (!isReady) {
+  if (!loaded || !isReady) {
     return null;
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth" options={{ headerShown: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="auth" />
       <Stack.Screen
         name="modal"
         options={{ presentation: "modal", title: "Modal" }}
