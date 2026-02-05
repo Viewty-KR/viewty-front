@@ -51,8 +51,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/viewty-front:latest
-            ${{ secrets.DOCKER_USERNAME }}/viewty-front:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/${{secrets.APPLICATION_NAME}}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{secrets.APPLICATION_NAME}}:${{ github.sha }}
 
   deploy:
     needs: docker
@@ -68,8 +68,8 @@ jobs:
           script: |
             cd ~/app
 
-            docker pull ${{ secrets.DOCKER_USERNAME }}/viewty-front:latest
-
+            docker pull ${{ secrets.DOCKER_USERNAME }}/${{secrets.APPLICATION_NAME}}:latest
+            docker run --rm ${{ secrets.DOCKER_USERNAME }}/${{secrets.APPLICATION_NAME}}:latest cat /etc/nginx/conf.d/default.conf > ./nginx-ssl.conf
             docker compose down
             docker compose up -d
 
