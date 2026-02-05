@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,8 +9,11 @@ import {
   Dimensions,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { ProductApi } from "../../libs/api";
 
 // 1. 타입 정의 (TypeScript의 핵심)
 interface TrendingItem {
@@ -32,6 +35,7 @@ interface LookItem {
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 48) / 2;
+const FALLBACK_IMAGE = "https://via.placeholder.com/400x400.png?text=Product";
 
 // 테마 컬러
 const COLORS = {
@@ -102,7 +106,89 @@ const CURATED_LOOKS: LookItem[] = [
 ];
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("Discover");
+  const [trendingItems, setTrendingItems] =
+    useState<TrendingItem[]>(TRENDING_DATA);
+  const [curatedLooks, setCuratedLooks] = useState<LookItem[]>(CURATED_LOOKS);
+  const [loading, setLoading] = useState(false);
+
+  const extractProducts = (payload: any): any[] => {
+    if (!payload) return [];
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload.content)) return payload.content;
+    if (Array.isArray(payload.items)) return payload.items;
+    if (Array.isArray(payload.data)) return payload.data;
+    return [];
+  };
+
+  const asNumber = (value: any): number => {
+    if (typeof value === "number") return value;
+    if (typeof value === "string") {
+      const numeric = Number(value.replace(/[^0-9.-]/g, ""));
+      if (Number.isFinite(numeric)) return numeric;
+    }
+    return 0;
+  };
+
+  const mapToTrending = (item: any): TrendingItem => ({
+    id: Number(item.id),
+    title: item.name ?? "상품명 미확인",
+    desc:
+      item.manufacturer ?? item.shortDescription ?? "상세 정보를 확인해보세요.",
+    image: item.imgUrl || FALLBACK_IMAGE,
+    tag: item.category ?? "PRODUCT",
+  });
+
+  const mapToLook = (item: any): LookItem => ({
+    id: Number(item.id),
+    title: item.name ?? "상품명 미확인",
+    desc: item.manufacturer ?? item.shortDescription ?? "",
+    price: asNumber(item.price),
+    image: item.imgUrl || FALLBACK_IMAGE,
+    color: "neutral",
+  });
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await ProductApi.getList();
+        if (response?.success) {
+          const rawList = extractProducts(response.data);
+          if (rawList.length) {
+            const trending = rawList
+              .filter((item) => item?.id != null)
+              .slice(0, 5)
+              .map(mapToTrending);
+            const curated = rawList
+              .filter((item) => item?.id != null)
+              .slice(0, 8)
+              .map(mapToLook);
+
+            if (trending.length) setTrendingItems(trending);
+            if (curated.length) setCuratedLooks(curated);
+          }
+        }
+      } catch (error) {
+        console.error("상품 목록 로딩 실패:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  const handleOpenProduct = (productId: number | string) => {
+    router.push({
+      pathname: "/product/[id]",
+      params: { id: String(productId) },
+    });
+  };
+
+  const formatPrice = (value: number) =>
+    value > 0 ? `₩${value.toLocaleString()}` : "View";
 
   return (
     <SafeAreaView style={styles.container}>
@@ -151,16 +237,23 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {loading && !trendingItems.length ? (
+          <View style={styles.loadingBlock}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        ) : null}
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.horizontalScroll}
         >
-          {TRENDING_DATA.map((item) => (
+          {trendingItems.map((item) => (
             <TouchableOpacity
               key={item.id}
               style={styles.trendCard}
               activeOpacity={0.9}
+              onPress={() => handleOpenProduct(item.id)}
             >
               <Image source={{ uri: item.image }} style={styles.trendImage} />
               <View style={styles.trendOverlay}>
@@ -182,29 +275,43 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Curated Looks</Text>
         </View>
 
-        <View style={styles.gridContainer}>
-          {CURATED_LOOKS.map((item) => (
-            <View key={item.id} style={styles.lookCard}>
-              <View style={styles.imageWrapper}>
-                <Image source={{ uri: item.image }} style={styles.lookImage} />
-                <TouchableOpacity style={styles.heartIcon}>
-                  <Ionicons name="heart-outline" size={20} color="white" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.tryOnBadge}>
-                  <MaterialCommunityIcons
-                    name="face-recognition"
-                    size={16}
-                    color={COLORS.primary}
-                  />
-                  <Text style={styles.tryOnText}>Try On</Text>
-                </TouchableOpacity>
-              </View>
+        {loading && !curatedLooks.length ? (
+          <View style={styles.loadingBlock}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        ) : null}
 
-              <Text style={styles.lookTitle}>{item.title}</Text>
-              <Text style={styles.lookDesc}>{item.desc}</Text>
+        <View style={styles.gridContainer}>
+          {curatedLooks.map((item) => (
+            <View key={item.id} style={styles.lookCard}>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => handleOpenProduct(item.id)}
+              >
+                <View style={styles.imageWrapper}>
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.lookImage}
+                  />
+                  <TouchableOpacity style={styles.heartIcon}>
+                    <Ionicons name="heart-outline" size={20} color="white" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.tryOnBadge}>
+                    <MaterialCommunityIcons
+                      name="face-recognition"
+                      size={16}
+                      color={COLORS.primary}
+                    />
+                    <Text style={styles.tryOnText}>Try On</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.lookTitle}>{item.title}</Text>
+                <Text style={styles.lookDesc}>{item.desc}</Text>
+              </TouchableOpacity>
 
               <View style={styles.priceRow}>
-                <Text style={styles.price}>${item.price}</Text>
+                <Text style={styles.price}>{formatPrice(item.price)}</Text>
                 <TouchableOpacity style={styles.addBtn}>
                   <Ionicons name="add" size={20} color="#333" />
                 </TouchableOpacity>
@@ -300,6 +407,11 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: "600",
     fontSize: 12,
+  },
+  loadingBlock: {
+    paddingVertical: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
   horizontalScroll: {
     paddingLeft: 20,
