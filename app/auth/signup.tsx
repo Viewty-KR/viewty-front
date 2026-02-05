@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-const isValidEmail = (email) => {
+const isValidEmail = (email: string) => {
   return /^[^@]+@[^@]+\.[^@]+$/.test(email);
 };
 
@@ -25,7 +25,7 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleChange = (name, value) => {
+  const handleChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrorMessage("");
   };
@@ -81,8 +81,13 @@ export default function SignupScreen() {
       const responseData = await response.json();
 
       if (response.ok && responseData.success) {
-        alert("회원가입이 완료되었습니다.");
-        router.push("/login");
+        const userIdToSend = responseData.data?.userId || formData.id;
+
+        alert("피부 진단을 시작하겠습니다.");
+        router.replace({
+          pathname: "/auth/survey",
+          params: { userId: userIdToSend },
+        });
       } else {
         const messageToShow =
           responseData.message || "회원가입에 실패했습니다.";
