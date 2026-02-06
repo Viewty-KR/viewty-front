@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { AuthApi } from "../../libs/api";
 
 export default function SurveyScreen() {
   const router = useRouter();
@@ -79,33 +80,25 @@ export default function SurveyScreen() {
       return;
     }
 
-    const surveyData: any = {
+    const surveyData = {
       userId: userId as string,
       concerns: selectedConcerns,
-      sensitivity: selectedSensitivity,
-      skinType: selectedSkinType,
+      sensitivity: selectedSensitivity as string,
+      skinType: selectedSkinType as string,
+      ...(selectedSkinType === "D" && {
+        feelingAfterWash: selectedFeelingAfterWash as string,
+        afternoonSkin: selectedAfternoonSkin as string,
+        poreSize: selectedPoreSize as string,
+      }),
     };
 
-    if (selectedSkinType === "D") {
-      surveyData.feelingAfterWash = selectedFeelingAfterWash;
-      surveyData.afternoonSkin = selectedAfternoonSkin;
-      surveyData.poreSize = selectedPoreSize;
-    }
-
     try {
-      const response = await fetch("http://localhost:8080/api/auth/survey", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(surveyData),
-      });
-      console.log(JSON.stringify(surveyData));
-      if (response.ok) {
+      const responseData = await AuthApi.createSurvey(surveyData);
+
+      if (responseData.success) {
         alert("회원가입이 완료되었습니다.");
         router.replace("/auth/login");
       } else {
-        const responseData = await response.json();
         alert(responseData.message || "설문 저장에 실패했습니다.");
       }
     } catch (error) {

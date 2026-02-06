@@ -53,14 +53,17 @@ function InitialLayout() {
         token = await SecureStore.getItemAsync("userToken");
       }
 
-      const currentPath = segments.join('/');
+      const currentPath = segments.join("/");
 
       // 토큰이 없고 보호된 경로에 접근하려는 경우
       if (!token && isProtectedRoute(segments)) {
         router.replace("/auth/login");
-      } 
+      }
       // 토큰이 있는데 로그인/회원가입 페이지에 있는 경우
-      else if (token && (currentPath === "auth/login" || currentPath === "auth/signup")) {
+      else if (
+        token &&
+        (currentPath === "auth/login" || currentPath === "auth/signup")
+      ) {
         router.replace("/auth/profile");
       }
     } catch (e) {
