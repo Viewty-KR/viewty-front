@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { AuthApi } from "../../libs/api";
 
 const isValidEmail = (email: string) => {
   return /^[^@]+@[^@]+\.[^@]+$/.test(email);
@@ -65,22 +66,14 @@ export default function SignupScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8080/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: formData.id,
-          email: formData.email,
-          name: formData.name,
-          password: formData.password,
-        }),
+      const responseData = await AuthApi.createSign({
+        userId: formData.id,
+        email: formData.email,
+        name: formData.name,
+        password: formData.password,
       });
 
-      const responseData = await response.json();
-
-      if (response.ok && responseData.success) {
+      if (responseData.success) {
         const userIdToSend = responseData.data?.userId || formData.id;
 
         alert("피부 진단을 시작하겠습니다.");

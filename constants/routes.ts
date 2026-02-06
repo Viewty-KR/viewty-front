@@ -13,6 +13,7 @@ export const PUBLIC_ROUTES = [
   '(tabs)',
   'auth/login',
   'auth/signup',
+  'auth/survey',
   'product',
 ] as const;
 
@@ -22,7 +23,6 @@ export const PUBLIC_ROUTES = [
  */
 export const PROTECTED_ROUTES = [
   'auth/profile',
-  'auth/survey',
 ] as const;
 
 /**
