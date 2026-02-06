@@ -10,6 +10,7 @@
  * 토큰 없이도 자유롭게 접근 가능
  */
 export const PUBLIC_ROUTES = [
+  '(tabs)',
   'auth/login',
   'auth/signup',
   'product',
@@ -20,7 +21,6 @@ export const PUBLIC_ROUTES = [
  * 토큰이 필요하며, 없을 경우 로그인 페이지로 리다이렉트
  */
 export const PROTECTED_ROUTES = [
-  '(tabs)',
   'auth/profile',
   'auth/survey',
 ] as const;
