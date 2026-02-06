@@ -4,7 +4,11 @@ import { router } from "expo-router";
 // API 기본 URL (환경에 따라 변경)
 // 안드로이드 에뮬레이터: "http://10.0.2.2:8081/api"
 // iOS 시뮬레이터 / 웹: "http://localhost:8081/api"
-const BASE_URL = "http://localhost:8080/api";
+import Constants from "expo-constants";
+
+// API 기본 URL - Docker 외부 환경변수에서 주입 (원격 서버의 docker-compose.yml 참고)
+const BASE_URL =
+  Constants.expoConfig?.extra?.apiBaseUrl || "http://localhost:8080/api";
 let isRedirectingToLogin = false;
 
 // 공통 fetch 래퍼 함수 (에러 처리 및 JSON 변환)
@@ -48,7 +52,7 @@ const fetchClient = async <T>(
 
     return json as T;
   } catch (error) {
-    console.error(`API Error (${endpoint}):`, error);
+    console.error(`API Error (${BASE_URL}${endpoint}):`, error);
     throw error;
   }
 };
