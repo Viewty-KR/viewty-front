@@ -3,10 +3,6 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# 빌드 시점에 환경변수 주입받기
-ARG API_BASE_URL=http://localhost:8080/api
-ENV API_BASE_URL=${API_BASE_URL}
-
 # Copy package files
 COPY package.json .
 
@@ -16,10 +12,8 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# 환경변수 확인 (빌드 로그에서 확인 가능)
-RUN echo "Building with API_BASE_URL: ${API_BASE_URL}"
-
-# Build the Expo web app (이 시점에 환경변수가 코드에 번들링됨)
+# Build the Expo web app
+# app.config.js의 기본값 /api 사용 (Nginx 리버스 프록시)
 RUN npx expo export --platform web
 
 # Production stage

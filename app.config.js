@@ -48,7 +48,8 @@ module.exports = {
       reactCompiler: true,
     },
     extra: {
-      apiBaseUrl: process.env.API_BASE_URL || "http://localhost:8080/api",
+      // 프로덕션 기본값: Nginx 리버스 프록시 사용
+      apiBaseUrl: process.env.API_BASE_URL || "/api",
     },
   },
 };
