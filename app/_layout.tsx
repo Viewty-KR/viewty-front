@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import "react-native-reanimated";
 
+import { isProtectedRoute, isPublicRoute } from "@/constants/routes";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export const unstable_settings = {
@@ -33,8 +34,15 @@ function InitialLayout() {
     // 폰트가 로드되지 않았다면 아무것도 하지 않음
     if (!loaded) return;
 
+    // 공개 경로는 인증 체크 없이 바로 준비 완료
+    if (isPublicRoute(segments)) {
+      setIsReady(true);
+      return;
+    }
+
+    // 보호된 경로이거나 auth 그룹에 접근 시 인증 체크
     performAuthCheck();
-  }, [loaded, segments[0]]); // segments 전체가 아닌 segments[0]만 감지
+  }, [loaded, segments]);
 
   const performAuthCheck = async () => {
     try {
@@ -45,13 +53,14 @@ function InitialLayout() {
         token = await SecureStore.getItemAsync("userToken");
       }
 
-      const inAuthGroup = segments[0] === "auth";
+      const currentPath = segments.join('/');
 
-      if (!token && inAuthGroup) {
-        // 토큰이 없고, 인증 페이지가 아니라면 -> 로그인으로
+      // 토큰이 없고 보호된 경로에 접근하려는 경우
+      if (!token && isProtectedRoute(segments)) {
         router.replace("/auth/login");
-      } else if (token && inAuthGroup) {
-        // 토큰이 있고, 로그인 페이지에 있다면 -> 프로필(메인)로
+      } 
+      // 토큰이 있는데 로그인/회원가입 페이지에 있는 경우
+      else if (token && (currentPath === "auth/login" || currentPath === "auth/signup")) {
         router.replace("/auth/profile");
       }
     } catch (e) {
