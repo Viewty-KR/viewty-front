@@ -1,38 +1,6 @@
-import { Platform } from "react-native";
 import Constants from "expo-constants";
-// [추가됨] 토큰 저장을 위한 라이브러리 import
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// [추가됨] 토큰 저장소 키 이름 (오타 방지용 상수)
-const TOKEN_KEY = "accessToken";
-
-// [추가됨] 토큰 가져오기 함수 (이게 없어서 에러가 났던 것입니다)
-const getToken = async (): Promise<string | null> => {
-  try {
-    return await AsyncStorage.getItem(TOKEN_KEY);
-  } catch (error) {
-    console.error("토큰 로드 실패:", error);
-    return null;
-  }
-};
-
-// [추가됨] 토큰 저장하기 함수 (로그인 성공 시 사용)
-export const setToken = async (token: string): Promise<void> => {
-  try {
-    await AsyncStorage.setItem(TOKEN_KEY, token);
-  } catch (error) {
-    console.error("토큰 저장 실패:", error);
-  }
-};
-
-// [추가됨] 토큰 삭제하기 함수 (로그아웃 시 사용)
-export const removeToken = async (): Promise<void> => {
-  try {
-    await AsyncStorage.removeItem(TOKEN_KEY);
-  } catch (error) {
-    console.error("토큰 삭제 실패:", error);
-  }
-};
+import { Platform } from "react-native";
+import { getToken } from "../hooks/useToken";
 
 // API 기본 URL을 환경/플랫폼에 맞춰 결정한다.
 const resolveBaseUrl = () => {
@@ -58,7 +26,6 @@ const fetchClient = async <T>(
   options?: RequestInit,
 ): Promise<T> => {
   try {
-    // [수정됨] 위에서 정의한 getToken 함수를 사용하여 토큰을 가져옵니다.
     const token = await getToken();
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -149,27 +116,111 @@ interface UserProfileResponse {
   };
 }
 
+interface ProductDetailResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    id: string;
+    name: string;
+    brand?: string;
+    price?: number;
+    description?: string;
+    imageUrl?: string;
+    category?: string;
+    ingredients?: string[];
+    [key: string]: unknown;
+  };
+}
+
+interface ProductListResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    content: {
+      id: string;
+      name: string;
+      brand?: string;
+      price?: number;
+      imageUrl?: string;
+      [key: string]: unknown;
+    }[];
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+  };
+}
+
+interface ReviewListResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    content: {
+      id: string;
+      name: string;
+      content: string;
+      rating: number;
+      createdAt?: string;
+      [key: string]: unknown;
+    }[];
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+  };
+}
+
+interface ReviewCreateResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    id: string;
+    [key: string]: unknown;
+  };
+}
+
+interface BookmarkStatusResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    isBookmarked: boolean;
+    [key: string]: unknown;
+  };
+}
+
+interface BookmarkToggleResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    isBookmarked: boolean;
+    [key: string]: unknown;
+  };
+}
+
 // --- 도메인별 API 함수들 ---
 
 export const ProductApi = {
   // 상품 상세 조회
-  getDetail: (id: string | string[]) => fetchClient(`/products/${id}`),
+  getDetail: (id: string | string[]) => 
+    fetchClient<ProductDetailResponse>(`/products/${id}`),
   // 상품 목록 조회
   getList: (page = 0, size = 20) =>
-    fetchClient(`/products?page=${page}&size=${size}`),
+    fetchClient<ProductListResponse>(`/products?page=${page}&size=${size}`),
 };
 
 export const ReviewApi = {
   // 리뷰 목록 조회
   getList: (productId: string | string[], page = 0, size = 10) =>
-    fetchClient(`/reviews?productId=${productId}&page=${page}&size=${size}`),
+    fetchClient<ReviewListResponse>(
+      `/reviews?productId=${productId}&page=${page}&size=${size}`
+    ),
 
   // 리뷰 등록
   create: (
     productId: string | string[],
     data: { name: string; content: string; rating: number },
   ) =>
-    fetchClient(`/reviews?productId=${productId}`, {
+    fetchClient<ReviewCreateResponse>(`/reviews?productId=${productId}`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -178,14 +229,18 @@ export const ReviewApi = {
 export const BookmarkApi = {
   // 북마크 상태 확인
   getStatus: (userId: number, productId: string | string[]) =>
-    fetchClient(`/bookmarks/status?userId=${userId}&productId=${productId}`),
+    fetchClient<BookmarkStatusResponse>(
+      `/bookmarks/status?userId=${userId}&productId=${productId}`
+    ),
 
   // 북마크 토글 (등록/해제)
   toggle: (userId: number, productId: string | string[]) =>
-    fetchClient(`/bookmarks/toggle?userId=${userId}&productId=${productId}`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    fetchClient<BookmarkToggleResponse>(
+      `/bookmarks/toggle?userId=${userId}&productId=${productId}`,
+      {
+        method: "POST",
+      }
+    ),
 };
 
 export const AuthApi = {
