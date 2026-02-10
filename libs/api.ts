@@ -1,5 +1,38 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
+// [추가됨] 토큰 저장을 위한 라이브러리 import
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// [추가됨] 토큰 저장소 키 이름 (오타 방지용 상수)
+const TOKEN_KEY = "accessToken";
+
+// [추가됨] 토큰 가져오기 함수 (이게 없어서 에러가 났던 것입니다)
+const getToken = async (): Promise<string | null> => {
+  try {
+    return await AsyncStorage.getItem(TOKEN_KEY);
+  } catch (error) {
+    console.error("토큰 로드 실패:", error);
+    return null;
+  }
+};
+
+// [추가됨] 토큰 저장하기 함수 (로그인 성공 시 사용)
+export const setToken = async (token: string): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+  } catch (error) {
+    console.error("토큰 저장 실패:", error);
+  }
+};
+
+// [추가됨] 토큰 삭제하기 함수 (로그아웃 시 사용)
+export const removeToken = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(TOKEN_KEY);
+  } catch (error) {
+    console.error("토큰 삭제 실패:", error);
+  }
+};
 
 // API 기본 URL을 환경/플랫폼에 맞춰 결정한다.
 const resolveBaseUrl = () => {
@@ -25,6 +58,7 @@ const fetchClient = async <T>(
   options?: RequestInit,
 ): Promise<T> => {
   try {
+    // [수정됨] 위에서 정의한 getToken 함수를 사용하여 토큰을 가져옵니다.
     const token = await getToken();
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -61,10 +95,10 @@ const fetchClient = async <T>(
       typeof parsedBody === "object" &&
       "success" in (parsedBody as Record<string, unknown>)
     ) {
-      return parsedBody;
+      return parsedBody as T;
     }
 
-    return { success: true, data: parsedBody };
+    return { success: true, data: parsedBody } as T;
   } catch (error) {
     console.error(`API Error (${BASE_URL}${endpoint}):`, error);
     throw error;
@@ -150,6 +184,7 @@ export const BookmarkApi = {
   toggle: (userId: number, productId: string | string[]) =>
     fetchClient(`/bookmarks/toggle?userId=${userId}&productId=${productId}`, {
       method: "POST",
+      body: JSON.stringify(data),
     }),
 };
 
