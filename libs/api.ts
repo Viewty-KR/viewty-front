@@ -1,7 +1,23 @@
-// API 기본 URL (환경에 따라 변경)
-// 안드로이드 에뮬레이터: "http://10.0.2.2:8081/api"
-// iOS 시뮬레이터 / 웹: "http://localhost:8081/api"
-const BASE_URL = "http://localhost:8080/api";
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+
+// API 기본 URL을 환경/플랫폼에 맞춰 결정한다.
+const resolveBaseUrl = () => {
+  const expoExtra =
+    (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined) ??
+    (Constants.manifest2?.extra as { apiBaseUrl?: string } | undefined);
+
+  const configuredUrl =
+    process.env.EXPO_PUBLIC_API_URL ?? expoExtra?.apiBaseUrl ?? null;
+
+  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
+
+  if (Platform.OS === "android") return "http://10.0.2.2:8080/api";
+  if (Platform.OS === "ios") return "http://localhost:8080/api";
+  return "http://localhost:8080/api";
+};
+
+const BASE_URL = resolveBaseUrl();
 
 // 공통 fetch 래퍼 함수 (에러 처리 및 JSON 변환)
 const fetchClient = async (endpoint: string, options?: RequestInit) => {
@@ -14,9 +30,35 @@ const fetchClient = async (endpoint: string, options?: RequestInit) => {
       ...options,
     });
 
-    const json = await response.json();
+    const rawBody = await response.text();
+    let parsedBody: unknown = null;
 
-    return json;
+    if (rawBody) {
+      try {
+        parsedBody = JSON.parse(rawBody);
+      } catch {
+        parsedBody = rawBody;
+      }
+    }
+
+    if (!response.ok) {
+      const errorMessage =
+        (parsedBody as any)?.message || response.statusText || "Request failed";
+      const error = new Error(errorMessage);
+      (error as any).status = response.status;
+      (error as any).data = parsedBody;
+      throw error;
+    }
+
+    if (
+      parsedBody &&
+      typeof parsedBody === "object" &&
+      "success" in (parsedBody as Record<string, unknown>)
+    ) {
+      return parsedBody;
+    }
+
+    return { success: true, data: parsedBody };
   } catch (error) {
     console.error(`API Error (${endpoint}):`, error);
     throw error;

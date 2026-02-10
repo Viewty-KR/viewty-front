@@ -15,11 +15,11 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-// [수정 1] 방금 만든 API 서비스를 import 합니다.
-// 경로가 맞는지 확인해주세요. (파일 위치에 따라 ../services/api 가 될 수도 있습니다)
 import { ProductApi, ReviewApi, BookmarkApi } from "../../libs/api";
 
-// 타입 정의
+// [중요] 사용 중인 백엔드 서버 주소
+const BASE_URL = "http://localhost:8080";
+
 interface Ingredient {
   name: string;
   ewgGrade?: string;
@@ -33,6 +33,7 @@ interface ProductDetail {
   manufacturer: string;
   ingredients: Ingredient[];
   harmfulIngredientCount: number;
+  img_url?: string;
   imgUrl?: string;
 }
 
@@ -48,39 +49,64 @@ export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
+  const productId =
+    typeof id === "string" ? id : Array.isArray(id) ? id[0] : undefined;
+
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // 리뷰 작성 모달 상태
   const [modalVisible, setModalVisible] = useState(false);
   const [reviewContent, setReviewContent] = useState("");
   const [rating, setRating] = useState(5);
-  // const [userName, setUserName] = useState("익명");
 
   const CURRENT_USER_ID = 1;
-  const DEFAULT_USER_NAME = "익명"; // 임시 유저 이름
+  const DEFAULT_USER_NAME = "익명";
 
   useEffect(() => {
-    fetchData();
-  }, [id]);
+    if (!productId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    fetchData(productId);
+  }, [productId]);
 
-  const fetchData = async () => {
+  const fetchData = async (targetId: string) => {
     try {
-      setLoading(true);
-
-      // [수정 2] API 호출을 한 번에 처리 (병렬 호출로 속도 개선)
-      // 각각의 fetchClient가 JSON 데이터를 반환하므로 바로 사용 가능합니다.
       const [prodRes, markRes, reviewRes] = await Promise.all([
-        ProductApi.getDetail(id),
-        BookmarkApi.getStatus(CURRENT_USER_ID, id),
-        ReviewApi.getList(id),
+        ProductApi.getDetail(targetId),
+        BookmarkApi.getStatus(CURRENT_USER_ID, targetId),
+        ReviewApi.getList(targetId),
       ]);
 
-      if (prodRes.success) setProduct(prodRes.data);
+      if (prodRes.success) {
+        const raw = (prodRes.data ?? {}) as Record<string, unknown>;
+
+        // 🔥 [Debug 1] 서버가 실제로 보내준 데이터의 '이름표(Key)'들을 전부 출력합니다.
+        // 로그창에서 "Available Keys: [...]" 부분을 꼭 확인해보세요!
+        console.log("🔥 [Debug] Available Keys:", Object.keys(raw));
+
+        const rawImage =
+          (raw["imgUrl"] as string | undefined) ??
+          (raw["img_url"] as string | undefined) ??
+          (raw["imageUrl"] as string | undefined) ??
+          (raw["image"] as string | undefined) ??
+          (raw["thumbnailUrl"] as string | undefined);
+
+        setProduct({
+          ...(raw as ProductDetail),
+          imgUrl: rawImage,
+          img_url: rawImage,
+        });
+      }
       if (markRes.success) setIsBookmarked(markRes.data.bookmarked);
-      if (reviewRes.success) setReviews(reviewRes.data.content);
+      if (reviewRes.success)
+        setReviews(
+          Array.isArray(reviewRes.data?.content) ? reviewRes.data.content : [],
+        );
     } catch (error) {
       console.error("데이터 로딩 실패:", error);
       Alert.alert("오류", "데이터를 불러오는 중 문제가 발생했습니다.");
@@ -89,20 +115,37 @@ export default function ProductDetailScreen() {
     }
   };
 
-  // 리뷰 목록만 따로 갱신할 때 사용
+  const getSafeImageUrl = (url?: string) => {
+    const FALLBACK_IMAGE = "https://via.placeholder.com/300?text=No+Image";
+
+    if (!url) return FALLBACK_IMAGE;
+
+    let targetUrl = url;
+
+    if (url.startsWith("/")) {
+      targetUrl = `${BASE_URL}${url}`;
+    } else if (!url.startsWith("http")) {
+      targetUrl = `${BASE_URL}/${url}`;
+    }
+
+    // [확인] encodeURI, decodeURI 없이 바로 리턴하는지 확인하세요.
+    return targetUrl;
+  };
   const refreshReviews = async () => {
+    if (!productId) return;
     try {
-      const res = await ReviewApi.getList(id);
-      if (res.success) setReviews(res.data.content);
+      const res = await ReviewApi.getList(productId);
+      if (res.success)
+        setReviews(Array.isArray(res.data?.content) ? res.data.content : []);
     } catch (error) {
       console.error("리뷰 로딩 실패:", error);
     }
   };
 
   const toggleBookmark = async () => {
+    if (!productId) return;
     try {
-      // [수정 3] BookmarkApi 사용
-      const res = await BookmarkApi.toggle(CURRENT_USER_ID, id);
+      const res = await BookmarkApi.toggle(CURRENT_USER_ID, productId);
       if (res.success) {
         setIsBookmarked(!isBookmarked);
       }
@@ -112,12 +155,12 @@ export default function ProductDetailScreen() {
   };
 
   const submitReview = async () => {
+    if (!productId) return;
     if (!reviewContent.trim())
       return Alert.alert("알림", "리뷰 내용을 입력해주세요.");
 
     try {
-      // [수정 4] ReviewApi 사용
-      const res = await ReviewApi.create(id, {
+      const res = await ReviewApi.create(productId, {
         name: DEFAULT_USER_NAME,
         content: reviewContent,
         rating: rating,
@@ -127,7 +170,7 @@ export default function ProductDetailScreen() {
         Alert.alert("성공", "리뷰가 등록되었습니다.");
         setModalVisible(false);
         setReviewContent("");
-        refreshReviews(); // 리뷰 목록 갱신
+        refreshReviews();
       } else {
         Alert.alert("실패", "리뷰 등록 중 오류가 발생했습니다.");
       }
@@ -153,6 +196,9 @@ export default function ProductDetailScreen() {
     );
   }
 
+  // 최종 이미지 주소 생성 (인코딩 적용됨)
+  const finalImageUrl = getSafeImageUrl(product.imgUrl || product.img_url);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       <Stack.Screen
@@ -163,11 +209,12 @@ export default function ProductDetailScreen() {
         {/* 상품 이미지 영역 */}
         <View style={styles.imageContainer}>
           <Image
-            source={{
-              uri: product.imgUrl || "https://via.placeholder.com/300",
-            }}
+            source={{ uri: finalImageUrl }}
             style={styles.productImage}
             resizeMode="contain"
+            onError={(e) =>
+              console.log("🟥 [Error] 최종 로드 실패 주소:", finalImageUrl)
+            }
           />
         </View>
 
@@ -306,6 +353,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     backgroundColor: "#fff",
+    minHeight: 200,
   },
   productImage: { width: 200, height: 200 },
   infoContainer: { padding: 20 },
@@ -358,7 +406,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   reviewDate: { fontSize: 12, color: "#aaa" },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

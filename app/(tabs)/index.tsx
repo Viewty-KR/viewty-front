@@ -47,71 +47,13 @@ const COLORS = {
 };
 
 // 더미 데이터 (타입 적용)
-const TRENDING_DATA: TrendingItem[] = [
-  {
-    id: 1,
-    title: "Glass Skin Edit",
-    desc: "Achieve the ultimate dewy glow.",
-    image:
-      "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?q=80&w=600&auto=format&fit=crop",
-    tag: "WEEKLY TOP",
-  },
-  {
-    id: 2,
-    title: "Milky Peach",
-    desc: "Soft & Warm daily look.",
-    image:
-      "https://images.unsplash.com/photo-1512413914633-b5043f4041ea?q=80&w=600&auto=format&fit=crop",
-    tag: "NEW ARRIVAL",
-  },
-];
-
-const CURATED_LOOKS: LookItem[] = [
-  {
-    id: 1,
-    title: "Interview Ready",
-    desc: "Natural matte finish",
-    price: 45,
-    image:
-      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?q=80&w=600&auto=format&fit=crop",
-    color: "warm",
-  },
-  {
-    id: 2,
-    title: "Date Night Pink",
-    desc: "Romantic & bold",
-    price: 62,
-    image:
-      "https://images.unsplash.com/photo-1515688594390-b649af70d282?q=80&w=600&auto=format&fit=crop",
-    color: "cool",
-  },
-  {
-    id: 3,
-    title: "Daily Glow",
-    desc: "Effortless radiance",
-    price: 30,
-    image:
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=600&auto=format&fit=crop",
-    color: "neutral",
-  },
-  {
-    id: 4,
-    title: "Party Glam",
-    desc: "Vibrant & fun",
-    price: 55,
-    image:
-      "https://images.unsplash.com/photo-1506956191951-7a88da4435e5?q=80&w=600&auto=format&fit=crop",
-    color: "cool",
-  },
-];
-
 export default function HomeScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("Discover");
-  const [trendingItems, setTrendingItems] =
-    useState<TrendingItem[]>(TRENDING_DATA);
-  const [curatedLooks, setCuratedLooks] = useState<LookItem[]>(CURATED_LOOKS);
+  const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
+  const [curatedLooks, setCuratedLooks] = useState<LookItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const extractProducts = (payload: any): any[] => {
     if (!payload) return [];
@@ -149,36 +91,54 @@ export default function HomeScreen() {
     color: "neutral",
   });
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await ProductApi.getList();
-        if (response?.success) {
-          const rawList = extractProducts(response.data);
-          if (rawList.length) {
-            const trending = rawList
-              .filter((item) => item?.id != null)
-              .slice(0, 5)
-              .map(mapToTrending);
-            const curated = rawList
-              .filter((item) => item?.id != null)
-              .slice(0, 8)
-              .map(mapToLook);
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
+      const response = await ProductApi.getList();
+      if (response?.success) {
+        const rawList = extractProducts(response.data);
+        if (rawList.length) {
+          const filtered = rawList.filter((item) => item?.id != null);
+          const trending = filtered.slice(0, 5).map(mapToTrending);
+          const curated = filtered.slice(0, 8).map(mapToLook);
 
-            if (trending.length) setTrendingItems(trending);
-            if (curated.length) setCuratedLooks(curated);
+          setTrendingItems(trending);
+          setCuratedLooks(curated);
+          if (!filtered.length) {
+            setErrorMessage("상품 데이터를 찾을 수 없습니다.");
           }
+        } else {
+          setTrendingItems([]);
+          setCuratedLooks([]);
+          setErrorMessage("상품 데이터를 찾을 수 없습니다.");
         }
-      } catch (error) {
-        console.error("상품 목록 로딩 실패:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        setTrendingItems([]);
+        setCuratedLooks([]);
+        setErrorMessage("상품 데이터를 불러오지 못했습니다.");
       }
-    };
+    } catch (error) {
+      console.error("상품 목록 로딩 실패:", error);
+      setTrendingItems([]);
+      setCuratedLooks([]);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "상품 데이터를 불러오지 못했습니다.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadProducts();
   }, []);
+
+  const handleRetry = () => {
+    loadProducts();
+  };
 
   const handleOpenProduct = (productId: number | string) => {
     router.push({
@@ -199,31 +159,12 @@ export default function HomeScreen() {
         <TouchableOpacity>
           <Ionicons name="search" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>LOOKBOOK</Text>
+        <Text style={styles.headerTitle}>viewty</Text>
         <TouchableOpacity>
           <Ionicons name="bag-handle-outline" size={24} color="black" />
         </TouchableOpacity>
       </View>
 
-      {/* 2. Top Tabs */}
-      <View style={styles.tabContainer}>
-        {["Discover", "My Looks", "AI Studio"].map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            style={[styles.tabItem, activeTab === tab && styles.activeTabItem]}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab && styles.activeTabText,
-              ]}
-            >
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -236,6 +177,15 @@ export default function HomeScreen() {
             <Text style={styles.seeAll}>View All</Text>
           </TouchableOpacity>
         </View>
+
+        {errorMessage ? (
+          <View style={styles.errorBlock}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+            <TouchableOpacity onPress={handleRetry} style={styles.retryBtn}>
+              <Text style={styles.retryText}>다시 시도</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {loading && !trendingItems.length ? (
           <View style={styles.loadingBlock}>
@@ -368,6 +318,29 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     letterSpacing: 1,
+  },
+  errorBlock: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#FFE8EE",
+  },
+  errorText: {
+    color: COLORS.primary,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  retryBtn: {
+    alignSelf: "flex-start",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+  },
+  retryText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   tabContainer: {
     flexDirection: "row",
