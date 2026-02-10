@@ -20,14 +20,20 @@ const resolveBaseUrl = () => {
 const BASE_URL = resolveBaseUrl();
 
 // 공통 fetch 래퍼 함수 (에러 처리 및 JSON 변환)
-const fetchClient = async (endpoint: string, options?: RequestInit) => {
+const fetchClient = async <T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> => {
   try {
+    const token = await getToken();
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
+      ...options,
       headers: {
         "Content-Type": "application/json",
-        // 필요 시 토큰 추가: Authorization: `Bearer ${token}`
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...(options?.headers || {}),
       },
-      ...options,
     });
 
     const rawBody = await response.text();
@@ -60,10 +66,54 @@ const fetchClient = async (endpoint: string, options?: RequestInit) => {
 
     return { success: true, data: parsedBody };
   } catch (error) {
-    console.error(`API Error (${endpoint}):`, error);
+    console.error(`API Error (${BASE_URL}${endpoint}):`, error);
     throw error;
   }
 };
+
+// --- API 응답 타입 정의 ---
+
+interface LoginResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    accessToken: string;
+  };
+}
+
+interface SignUpResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    userId: string;
+  };
+}
+
+interface SurveyResponse {
+  success: boolean;
+  message?: string;
+}
+
+interface PasswordUpdateResponse {
+  success: boolean;
+  message?: string;
+}
+
+interface UserProfileResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    userId: string;
+    email: string;
+    name: string;
+    concerns: string[];
+    sensitivity: string;
+    skinType: string;
+    feelingAfterWash?: string;
+    afternoonSkin?: string;
+    poreSize?: string;
+  };
+}
 
 // --- 도메인별 API 함수들 ---
 
@@ -100,5 +150,54 @@ export const BookmarkApi = {
   toggle: (userId: number, productId: string | string[]) =>
     fetchClient(`/bookmarks/toggle?userId=${userId}&productId=${productId}`, {
       method: "POST",
+    }),
+};
+
+export const AuthApi = {
+  // 로그인
+  createLogin: (data: { userId: string; password: string }) =>
+    fetchClient<LoginResponse>(`/auth/login`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // 회원가입
+  createSign: (data: {
+    userId: string;
+    email: string;
+    name: string;
+    password: string;
+  }) =>
+    fetchClient<SignUpResponse>(`/auth/signup`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // 설문조사
+  createSurvey: (data: {
+    userId: string;
+    concerns: string[];
+    sensitivity: string;
+    skinType: string;
+    feelingAfterWash?: string;
+    afternoonSkin?: string;
+    poreSize?: string;
+  }) =>
+    fetchClient<SurveyResponse>("/auth/survey", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // 비밀번호 업데이트
+  updatePassword: (data: { password: string }) =>
+    fetchClient<PasswordUpdateResponse>("/auth/pwdUpdate", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // 프로필
+  getProfile: () =>
+    fetchClient<UserProfileResponse>("/auth/profile", {
+      method: "GET",
     }),
 };

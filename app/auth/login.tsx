@@ -7,10 +7,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
+import { AuthApi } from "../../libs/api";
+import { getToken, removeToken, setToken } from "../../hooks/useToken";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -25,13 +25,7 @@ export default function LoginScreen() {
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
-        let userToken = null;
-        if (Platform.OS === "web") {
-          userToken = localStorage.getItem("userToken");
-        } else {
-          userToken = await SecureStore.getItemAsync("userToken");
-        }
-
+        const userToken = await getToken();
         if (userToken) {
           console.log("Existing token found:", userToken);
           setIsLoggedIn(true);
@@ -66,25 +60,14 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: formData.id,
-          password: formData.password,
-        }),
+      const responseData = await AuthApi.createLogin({
+        userId: formData.id,
+        password: formData.password,
       });
 
-      const responseData = await response.json();
-      if (response.ok && responseData.success) {
+      if (responseData.success) {
         const { accessToken } = responseData.data;
-        if (Platform.OS === "web") {
-          localStorage.setItem("userToken", accessToken);
-        } else {
-          await SecureStore.setItemAsync("userToken", accessToken);
-        }
+        await setToken(accessToken);
         setIsLoggedIn(true);
         router.push("/");
       } else {
@@ -93,9 +76,10 @@ export default function LoginScreen() {
         setErrorMessage(messageToShow);
         setIsLoggedIn(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setErrorMessage("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+      const messageToShow = error.message || "네트워크 오류가 발생했습니다. 다시 시도해주세요.";
+      setErrorMessage(messageToShow);
       setIsLoggedIn(false);
     } finally {
       setLoading(false);
@@ -104,14 +88,9 @@ export default function LoginScreen() {
 
   const handleLogout = async () => {
     try {
-      if (Platform.OS === "web") {
-        localStorage.removeItem("userToken");
-      } else {
-        await SecureStore.deleteItemAsync("userToken");
-      }
+      await removeToken();
       alert("로그아웃되었습니다.");
       setIsLoggedIn(false);
-      router.push("/auth/login");
     } catch (error) {
       console.error("SecureStore에서 토큰을 제거하는 중 오류 발생:", error);
       alert("로그아웃 중 오류가 발생했습니다.");

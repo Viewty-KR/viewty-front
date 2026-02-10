@@ -10,23 +10,16 @@ import {
   Button,
   TouchableOpacity,
 } from "react-native";
-import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
+import { AuthApi } from "../../libs/api";
+import { getToken, removeToken } from "../../hooks/useToken";
 
 if (Platform.OS === "web" && typeof atob === "undefined") {
   global.atob = (input) => Buffer.from(input, "base64").toString("binary");
 }
 
 const LogoutButton = () => {
-  const router = useRouter();
-
   const handleLogout = async () => {
-    if (Platform.OS === "web") {
-      localStorage.removeItem("userToken");
-    } else {
-      await SecureStore.deleteItemAsync("userToken");
-    }
-    router.replace("/");
+    await removeToken();
   };
 
   return (
@@ -37,7 +30,6 @@ const LogoutButton = () => {
 };
 
 export default function MyPageScreen() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,30 +57,14 @@ export default function MyPageScreen() {
 
     setPasswordUpdateLoading(true);
     try {
-      let token = null;
-      if (Platform.OS === "web") {
-        token = localStorage.getItem("userToken");
-      } else {
-        token = await SecureStore.getItemAsync("userToken");
-      }
-
+      const token = await getToken();
       if (!token) {
-        router.replace("/auth/login");
         return;
       }
 
-      const response = await fetch(`http://localhost:8080/api/auth/pwdUpdate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ password: password }),
-      });
+      const responseData = await AuthApi.updatePassword({ password: password });
 
-      const responseData = await response.json();
-
-      if (response.ok && responseData.success) {
+      if (responseData.success) {
         alert("비밀번호가 성공적으로 변경되었습니다.");
         setPassword("");
         setPasswordConfirm("");
@@ -146,6 +122,12 @@ export default function MyPageScreen() {
   };
 
   const handleUpdate = async () => {
+    if (!userData) {
+      setUpdateMessage(
+        "사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
+      );
+      return;
+    }
     setUpdateMessage("");
 
     if (selectedConcerns.length === 0) {
@@ -174,43 +156,27 @@ export default function MyPageScreen() {
 
     setLoading(true);
     try {
-      let token = null;
-      if (Platform.OS === "web") {
-        token = localStorage.getItem("userToken");
-      } else {
-        token = await SecureStore.getItemAsync("userToken");
-      }
-
+      const token = await getToken();
       if (!token) {
-        router.replace("/auth/login");
         return;
       }
 
-      const updateData: any = {
+      const updateData = {
+        userId: userData.userId,
         concerns: selectedConcerns,
-        sensitivity: selectedSensitivity,
-        skinType: selectedSkinType,
-        feelingAfterWash: selectedFeelingAfterWash,
-        afternoonSkin: selectedAfternoonSkin,
-        poreSize: selectedPoreSize,
+        sensitivity: selectedSensitivity as string,
+        skinType: selectedSkinType as string,
+        ...(selectedSkinType === "D" && {
+          feelingAfterWash: selectedFeelingAfterWash as string,
+          afternoonSkin: selectedAfternoonSkin as string,
+          poreSize: selectedPoreSize as string,
+        }),
       };
 
-      console.log(JSON.stringify(updateData));
-      const response = await fetch(`http://localhost:8080/api/auth/survey`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updateData),
-      });
+      const responseData = await AuthApi.createSurvey(updateData);
 
-      const responseData = await response.json();
-
-      if (response.ok && responseData.success) {
+      if (responseData.success) {
         alert("정보가 성공적으로 수정되었습니다.");
-        setPassword("");
-        setPasswordConfirm("");
         fetchUserData();
       } else {
         setUpdateMessage(responseData.message || "정보 수정에 실패했습니다.");
@@ -225,43 +191,27 @@ export default function MyPageScreen() {
 
   const fetchUserData = useCallback(async () => {
     try {
-      let token = null;
-      if (Platform.OS === "web") {
-        token = localStorage.getItem("userToken");
-      } else {
-        token = await SecureStore.getItemAsync("userToken");
-      }
-
+      const token = await getToken();
       if (!token) {
-        router.replace("/auth/login");
         return;
       }
 
-      const userResponse = await fetch(
-        "http://localhost:8080/api/auth/profile",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      const userProfile = await userResponse.json();
-      if (userResponse.ok) {
+      const userProfile = await AuthApi.getProfile();
+      if (userProfile.success) {
         setUserData(userProfile.data);
       } else {
         console.log("오류 - ", userProfile.message);
-        console.log("오류 - ", userProfile.status);
         setError(
           userProfile.message || "사용자 정보를 불러오는데 실패했습니다.",
         );
       }
     } catch (err) {
+      console.log(err);
       setError("데이터를 불러오는 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     fetchUserData();

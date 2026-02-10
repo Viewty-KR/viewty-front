@@ -13,6 +13,7 @@ RUN npm install
 COPY . .
 
 # Build the Expo web app
+# app.config.js의 기본값 /api 사용 (Nginx 리버스 프록시)
 RUN npx expo export --platform web
 
 # Production stage
