@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ProductApi } from "../libs/api";
-import { LookItem, TrendingItem } from "../app/(tabs)/index.types";
-import { extractProducts, mapToLook, mapToTrending } from "../app/(tabs)/index.utils";
+import { LookItem, TrendingItem } from "../screens/home/index.types";
+import { extractProducts, mapToLook, mapToTrending } from "../screens/home/index.utils";
 
 interface UseProductsReturn {
   trendingItems: TrendingItem[];
