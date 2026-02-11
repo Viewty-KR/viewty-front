@@ -12,7 +12,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ErrorModal } from "../../components/ErrorModal";
-import { CuratedLooksSkeleton, TrendingSkeleton } from "../../components/Skeletons";
+import {
+  CuratedLooksSkeleton,
+  TrendingSkeleton,
+} from "../../components/Skeletons";
 import { COLORS, ICON_SIZE } from "../../constants/theme";
 import { useProducts } from "../../hooks/useProducts";
 import { getCardWidth, styles } from "./index.styles";
@@ -65,7 +68,11 @@ export default function HomeScreen() {
           accessibilityLabel="장바구니"
           accessibilityHint="장바구니로 이동합니다"
         >
-          <Ionicons name="bag-handle-outline" size={ICON_SIZE.lg} color={COLORS.black} />
+          <Ionicons
+            name="bag-handle-outline"
+            size={ICON_SIZE.lg}
+            color={COLORS.black}
+          />
         </TouchableOpacity>
       </View>
 
@@ -110,7 +117,11 @@ export default function HomeScreen() {
                   <Text style={styles.trendTitle}>{item.title}</Text>
                   <Text style={styles.trendDesc}>{item.desc}</Text>
                   <View style={styles.arrowBtn}>
-                    <Ionicons name="arrow-forward" size={ICON_SIZE.md} color={COLORS.white} />
+                    <Ionicons
+                      name="arrow-forward"
+                      size={ICON_SIZE.md}
+                      color={COLORS.white}
+                    />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -132,41 +143,58 @@ export default function HomeScreen() {
                 key={item.id}
                 style={[styles.lookCard, { width: cardWidth }]}
               >
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() => handleOpenProduct(item.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${item.title} 상품 보기`}
-                  accessibilityHint={`${formatPrice(item.price)} ${item.desc}`}
-                >
-                  <View style={styles.imageWrapper}>
+                {/* [수정] TouchableOpacity 중첩 제거: 이미지를 감싸는 영역 */}
+                <View style={styles.imageWrapper}>
+                  {/* 이미지 클릭 시 상세 이동 */}
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => handleOpenProduct(item.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.title} 이미지 보기`}
+                  >
                     <Image
                       source={{ uri: item.image }}
                       style={styles.lookImage}
                     />
-                    <TouchableOpacity
-                      style={styles.heartIcon}
-                      accessibilityRole="button"
-                      accessibilityLabel="찜하기"
-                      accessibilityHint="관심 상품에 추가합니다"
-                    >
-                      <Ionicons name="heart-outline" size={ICON_SIZE.md} color={COLORS.white} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.tryOnBadge}
-                      accessibilityRole="button"
-                      accessibilityLabel="가상 착용"
-                      accessibilityHint="AI로 상품을 미리 착용해볼 수 있습니다"
-                    >
-                      <MaterialCommunityIcons
-                        name="face-recognition"
-                        size={ICON_SIZE.sm}
-                        color={COLORS.primary}
-                      />
-                      <Text style={styles.tryOnText}>Try On</Text>
-                    </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
 
+                  {/* 찜하기 버튼 (이미지 형제가 됨) */}
+                  <TouchableOpacity
+                    style={styles.heartIcon}
+                    accessibilityRole="button"
+                    accessibilityLabel="찜하기"
+                    accessibilityHint="관심 상품에 추가합니다"
+                  >
+                    <Ionicons
+                      name="heart-outline"
+                      size={ICON_SIZE.md}
+                      color={COLORS.white}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Try On 버튼 (이미지 형제가 됨) */}
+                  <TouchableOpacity
+                    style={styles.tryOnBadge}
+                    accessibilityRole="button"
+                    accessibilityLabel="가상 착용"
+                    accessibilityHint="AI로 상품을 미리 착용해볼 수 있습니다"
+                  >
+                    <MaterialCommunityIcons
+                      name="face-recognition"
+                      size={ICON_SIZE.sm}
+                      color={COLORS.primary}
+                    />
+                    <Text style={styles.tryOnText}>Try On</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* [수정] 텍스트 영역 클릭 시 상세 이동 (별도 버튼으로 분리) */}
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => handleOpenProduct(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.title} 상세 보기`}
+                >
                   <Text style={styles.lookTitle}>{item.title}</Text>
                   <Text style={styles.lookDesc}>{item.desc}</Text>
                 </TouchableOpacity>
@@ -179,7 +207,11 @@ export default function HomeScreen() {
                     accessibilityLabel="장바구니에 추가"
                     accessibilityHint={`${item.title}을 장바구니에 담습니다`}
                   >
-                    <Ionicons name="add" size={ICON_SIZE.md} color={COLORS.textSecondary} />
+                    <Ionicons
+                      name="add"
+                      size={ICON_SIZE.md}
+                      color={COLORS.textSecondary}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
