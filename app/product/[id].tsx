@@ -11,30 +11,59 @@ import {
   TextInput,
   Alert,
   SafeAreaView,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-
 import { ProductApi, ReviewApi, BookmarkApi } from "../../libs/api";
+import {
+  analyzeIngredients,
+  IngredientAnalysisResult,
+} from "./ingredientUtils";
 
-// [중요] 사용 중인 백엔드 서버 주소
+// 안드로이드 애니메이션 활성화
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const BASE_URL = "http://localhost:8080";
 
+// --- [타입 정의] ---
 interface Ingredient {
   name: string;
-  ewgGrade?: string;
   isHarmful: boolean;
+  division?: string;
+  isCaution?: boolean;
+  isAllergy?: boolean;
 }
 
 interface ProductDetail {
   id: number;
   name: string;
-  price: string;
+  price: number;
   manufacturer: string;
   ingredients: Ingredient[];
   harmfulIngredientCount: number;
   img_url?: string;
   imgUrl?: string;
+  // 상세 정보
+  capacity?: string;
+  specifications?: string;
+  expiryDate?: string;
+  usageMethod?: string;
+  country?: string;
+  isFunctional?: string;
+  precautions?: string;
+  qa?: string;
+  csNumber?: string;
+  deliveryFee?: string;
+  deliveryJejuFee?: string;
+  allIngredients?: string;
 }
 
 interface Review {
@@ -45,10 +74,141 @@ interface Review {
   createdAt: string;
 }
 
+// --- [컴포넌트] 아코디언 섹션 ---
+const ExpandableSection = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const toggleExpand = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded(!expanded);
+  };
+  return (
+    <View style={styles.expandableContainer}>
+      <TouchableOpacity
+        style={styles.expandableHeader}
+        onPress={toggleExpand}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.expandableTitle}>{title}</Text>
+        <Ionicons
+          name={expanded ? "chevron-up" : "chevron-down"}
+          size={20}
+          color="#888"
+        />
+      </TouchableOpacity>
+      {expanded && <View style={styles.expandableContent}>{children}</View>}
+    </View>
+  );
+};
+
+// --- [컴포넌트] 정보 행 ---
+const InfoRow = ({ label, value }: { label: string; value?: string }) => (
+  <View style={styles.infoRow}>
+    <Text style={styles.infoLabel}>{label}</Text>
+    <Text style={styles.infoValue}>{value || "-"}</Text>
+  </View>
+);
+
+// --- [컴포넌트] 성분 그래프 (화해 스타일) ---
+const CompositionBar = ({ result }: { result: IngredientAnalysisResult }) => {
+  if (result.totalCount === 0) return null;
+  const { safeCount, warningCount, dangerCount } = result;
+
+  return (
+    <View style={styles.compositionContainer}>
+      <View style={styles.compositionLabels}>
+        <Text style={styles.compLabel}>
+          전체 성분 <Text style={styles.compValue}>{result.totalCount}</Text>
+        </Text>
+
+        {safeCount > 0 && (
+          <View style={[styles.compBadge, { backgroundColor: "#E8F5E9" }]}>
+            <Text style={[styles.compBadgeText, { color: "#2E7D32" }]}>
+              안전 {safeCount}
+            </Text>
+          </View>
+        )}
+        {warningCount > 0 && (
+          <View style={[styles.compBadge, { backgroundColor: "#FFF8E1" }]}>
+            <Text style={[styles.compBadgeText, { color: "#FBC02D" }]}>
+              주의 {warningCount}
+            </Text>
+          </View>
+        )}
+        {dangerCount > 0 && (
+          <View style={[styles.compBadge, { backgroundColor: "#FFEBEE" }]}>
+            <Text style={[styles.compBadgeText, { color: "#C62828" }]}>
+              위험 {dangerCount}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* 컬러 바 그래프 */}
+      <View style={styles.graphBar}>
+        {safeCount > 0 && (
+          <View
+            style={{
+              flex: safeCount,
+              backgroundColor: "#4CAF50",
+              height: "100%",
+            }}
+          />
+        )}
+        {warningCount > 0 && (
+          <View
+            style={{
+              flex: warningCount,
+              backgroundColor: "#FFCA28",
+              height: "100%",
+            }}
+          />
+        )}
+        {dangerCount > 0 && (
+          <View
+            style={{
+              flex: dangerCount,
+              backgroundColor: "#EF5350",
+              height: "100%",
+            }}
+          />
+        )}
+      </View>
+    </View>
+  );
+};
+
+// --- [컴포넌트] 주의 성분 리스트 아이템 ---
+const AlertRow = ({
+  title,
+  count,
+  color,
+}: {
+  title: string;
+  count: number;
+  color: string;
+}) => (
+  <View style={styles.alertRow}>
+    <View style={styles.alertLeft}>
+      <Ionicons name="water" size={18} color={color} />
+      <Text style={styles.alertTitle}>{title}</Text>
+    </View>
+    <Text style={[styles.alertCount, { color: count > 0 ? "#333" : "#ccc" }]}>
+      {count}개
+    </Text>
+  </View>
+);
+
+// =========================================================================
+// 메인 스크린
+// =========================================================================
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
-  const router = useRouter();
-
   const productId =
     typeof id === "string" ? id : Array.isArray(id) ? id[0] : undefined;
 
@@ -56,8 +216,11 @@ export default function ProductDetailScreen() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<IngredientAnalysisResult | null>(
+    null,
+  );
 
-  // 리뷰 작성 모달 상태
+  // 리뷰 모달
   const [modalVisible, setModalVisible] = useState(false);
   const [reviewContent, setReviewContent] = useState("");
   const [rating, setRating] = useState(5);
@@ -66,10 +229,7 @@ export default function ProductDetailScreen() {
   const DEFAULT_USER_NAME = "익명";
 
   useEffect(() => {
-    if (!productId) {
-      setLoading(false);
-      return;
-    }
+    if (!productId) return;
     setLoading(true);
     fetchData(productId);
   }, [productId]);
@@ -84,11 +244,6 @@ export default function ProductDetailScreen() {
 
       if (prodRes.success) {
         const raw = (prodRes.data ?? {}) as Record<string, unknown>;
-
-        // 🔥 [Debug 1] 서버가 실제로 보내준 데이터의 '이름표(Key)'들을 전부 출력합니다.
-        // 로그창에서 "Available Keys: [...]" 부분을 꼭 확인해보세요!
-        console.log("🔥 [Debug] Available Keys:", Object.keys(raw));
-
         const rawImage =
           (raw["imgUrl"] as string | undefined) ??
           (raw["img_url"] as string | undefined) ??
@@ -96,19 +251,43 @@ export default function ProductDetailScreen() {
           (raw["image"] as string | undefined) ??
           (raw["thumbnailUrl"] as string | undefined);
 
+        const productData = raw as unknown as ProductDetail;
+
         setProduct({
-          ...(raw as ProductDetail),
+          ...productData,
           imgUrl: rawImage,
           img_url: rawImage,
         });
+
+        // [성분 분석 실행]
+        if (productData.ingredients) {
+          const analyzed = analyzeIngredients(productData.ingredients);
+          setAnalysis(analyzed);
+        }
       }
-      if (markRes.success) setIsBookmarked(markRes.data.bookmarked);
-      if (reviewRes.success)
-        setReviews(
-          Array.isArray(reviewRes.data?.content) ? reviewRes.data.content : [],
-        );
+
+      if (markRes.success) {
+        const bookmarkData = markRes.data as unknown as { bookmarked: boolean };
+        setIsBookmarked(bookmarkData.bookmarked);
+      }
+
+      if (reviewRes.success) {
+        const pageData = reviewRes.data as unknown as { content: any[] };
+        if (pageData && Array.isArray(pageData.content)) {
+          const mappedReviews: Review[] = pageData.content.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            content: item.content,
+            rating: item.rating,
+            createdAt: item.createdAt,
+          }));
+          setReviews(mappedReviews);
+        } else {
+          setReviews([]);
+        }
+      }
     } catch (error) {
-      console.error("데이터 로딩 실패:", error);
+      console.error("로딩 실패:", error);
       Alert.alert("오류", "데이터를 불러오는 중 문제가 발생했습니다.");
     } finally {
       setLoading(false);
@@ -116,88 +295,66 @@ export default function ProductDetailScreen() {
   };
 
   const getSafeImageUrl = (url?: string) => {
-    const FALLBACK_IMAGE = "https://via.placeholder.com/300?text=No+Image";
-
-    if (!url) return FALLBACK_IMAGE;
-
-    let targetUrl = url;
-
-    if (url.startsWith("/")) {
-      targetUrl = `${BASE_URL}${url}`;
-    } else if (!url.startsWith("http")) {
-      targetUrl = `${BASE_URL}/${url}`;
-    }
-
-    // [확인] encodeURI, decodeURI 없이 바로 리턴하는지 확인하세요.
-    return targetUrl;
-  };
-  const refreshReviews = async () => {
-    if (!productId) return;
-    try {
-      const res = await ReviewApi.getList(productId);
-      if (res.success)
-        setReviews(Array.isArray(res.data?.content) ? res.data.content : []);
-    } catch (error) {
-      console.error("리뷰 로딩 실패:", error);
-    }
+    if (!url) return "https://via.placeholder.com/300?text=No+Image";
+    return url.startsWith("http") || url.startsWith("/")
+      ? url.startsWith("/")
+        ? `${BASE_URL}${url}`
+        : url
+      : `${BASE_URL}/${url}`;
   };
 
   const toggleBookmark = async () => {
     if (!productId) return;
     try {
       const res = await BookmarkApi.toggle(CURRENT_USER_ID, productId);
-      if (res.success) {
-        setIsBookmarked(!isBookmarked);
-      }
+      if (res.success) setIsBookmarked(!isBookmarked);
     } catch (error) {
-      Alert.alert("오류", "북마크 변경에 실패했습니다.");
+      Alert.alert("오류", "북마크 변경 실패");
     }
   };
 
   const submitReview = async () => {
     if (!productId) return;
     if (!reviewContent.trim())
-      return Alert.alert("알림", "리뷰 내용을 입력해주세요.");
-
+      return Alert.alert("알림", "내용을 입력해주세요.");
     try {
       const res = await ReviewApi.create(productId, {
         name: DEFAULT_USER_NAME,
         content: reviewContent,
         rating: rating,
       });
-
       if (res.success) {
-        Alert.alert("성공", "리뷰가 등록되었습니다.");
+        Alert.alert("성공", "리뷰 등록 완료");
         setModalVisible(false);
         setReviewContent("");
-        refreshReviews();
-      } else {
-        Alert.alert("실패", "리뷰 등록 중 오류가 발생했습니다.");
+        fetchData(productId); // 리뷰 목록 새로고침
       }
     } catch (error) {
-      console.error(error);
-      Alert.alert("오류", "리뷰 등록에 실패했습니다.");
+      Alert.alert("오류", "리뷰 등록 실패");
     }
   };
 
-  if (loading) {
+  const getAverageRating = () => {
+    if (reviews.length === 0) return 0;
+    const sum = reviews.reduce((acc, curr) => acc + curr.rating, 0);
+    return (sum / reviews.length).toFixed(1);
+  };
+
+  if (loading)
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#FF2D78" />
       </View>
     );
-  }
-
-  if (!product) {
+  if (!product)
     return (
       <View style={styles.center}>
-        <Text>상품 정보를 찾을 수 없습니다.</Text>
+        <Text>정보를 찾을 수 없습니다.</Text>
       </View>
     );
-  }
 
-  // 최종 이미지 주소 생성 (인코딩 적용됨)
   const finalImageUrl = getSafeImageUrl(product.imgUrl || product.img_url);
+  const averageRating = getAverageRating();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
@@ -206,24 +363,28 @@ export default function ProductDetailScreen() {
       />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
-        {/* 상품 이미지 영역 */}
         <View style={styles.imageContainer}>
           <Image
             source={{ uri: finalImageUrl }}
             style={styles.productImage}
             resizeMode="contain"
-            onError={(e) =>
-              console.log("🟥 [Error] 최종 로드 실패 주소:", finalImageUrl)
-            }
           />
         </View>
 
-        {/* 상품 기본 정보 */}
         <View style={styles.infoContainer}>
           <Text style={styles.brandName}>{product.manufacturer}</Text>
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.price}>{product.price}원</Text>
-
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>
+              {product.price ? product.price.toLocaleString() : 0}원
+            </Text>
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={16} color="#FFD700" />
+              <Text style={styles.ratingText}>
+                {averageRating} ({reviews.length})
+              </Text>
+            </View>
+          </View>
           <TouchableOpacity
             style={styles.bookmarkButton}
             onPress={toggleBookmark}
@@ -243,29 +404,125 @@ export default function ProductDetailScreen() {
 
         <View style={styles.divider} />
 
-        {/* 성분 분석 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>성분 분석</Text>
-          <View style={styles.ingredientSummary}>
-            <View style={styles.ingredientBadge}>
-              <Text style={styles.badgeLabel}>주의 성분</Text>
+        {/* 상세 정보 (아코디언) */}
+        <View style={styles.infoSectionContainer}>
+          <ExpandableSection title="상품정보 제공고시">
+            <InfoRow label="용량/중량" value={product.capacity} />
+            <InfoRow label="주요사양" value={product.specifications} />
+            <InfoRow label="사용기한" value={product.expiryDate} />
+            <InfoRow label="제조국" value={product.country} />
+            <InfoRow label="제조업자" value={product.manufacturer} />
+            <InfoRow label="기능성여부" value={product.isFunctional} />
+            <View style={{ marginTop: 15 }}>
+              <Text style={styles.infoLabel}>전성분</Text>
               <Text
-                style={[
-                  styles.badgeValue,
-                  {
-                    color: product.harmfulIngredientCount > 0 ? "red" : "green",
-                  },
-                ]}
+                style={[styles.infoValue, { marginTop: 5, lineHeight: 20 }]}
               >
-                {product.harmfulIngredientCount}개
+                {product.allIngredients || "전성분 정보가 없습니다."}
               </Text>
             </View>
-            <Text style={styles.ingredientDesc}>
-              {product.harmfulIngredientCount === 0
-                ? "20가지 주의 성분이 포함되지 않았습니다."
-                : "주의 성분이 포함되어 있으니 확인해보세요."}
-            </Text>
-          </View>
+          </ExpandableSection>
+
+          <ExpandableSection title="사용법 및 주의사항">
+            <View style={styles.longTextContainer}>
+              <Text style={styles.longTextLabel}>[사용방법]</Text>
+              <Text style={styles.longTextValue}>
+                {product.usageMethod || "정보 없음"}
+              </Text>
+            </View>
+            <View style={[styles.longTextContainer, { marginTop: 15 }]}>
+              <Text style={[styles.longTextLabel, { color: "#D32F2F" }]}>
+                [주의사항]
+              </Text>
+              <Text style={styles.longTextValue}>
+                {product.precautions || "정보 없음"}
+              </Text>
+            </View>
+          </ExpandableSection>
+
+          <ExpandableSection title="배송/교환/반품 안내">
+            <InfoRow label="배송비" value={product.deliveryFee} />
+            <View style={{ paddingVertical: 10 }}>
+              <Text style={styles.infoDesc}>
+                단순 변심 반품 시 배송비는 고객 부담입니다.
+              </Text>
+            </View>
+          </ExpandableSection>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* 성분 분석 (개선됨) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>성분 구성</Text>
+
+          {analysis ? (
+            <>
+              <CompositionBar result={analysis} />
+              <View style={styles.dividerThin} />
+
+              <Text
+                style={[styles.sectionTitle, { fontSize: 16, marginTop: 20 }]}
+              >
+                주의 성분 분석
+              </Text>
+
+              <View style={styles.alertContainer}>
+                {/* 20가지 주의 성분 */}
+                <AlertRow
+                  title="20가지 주의성분"
+                  count={analysis.caution20List.length}
+                  color={
+                    analysis.caution20List.length > 0 ? "#FF5252" : "#E0E0E0"
+                  }
+                />
+                {analysis.caution20List.length > 0 && (
+                  <Text style={styles.alertDetailText}>
+                    {analysis.caution20List.join(", ")}
+                  </Text>
+                )}
+
+                {/* 알레르기 주의 성분 */}
+                <AlertRow
+                  title="알레르기 주의성분"
+                  count={analysis.allergyList.length}
+                  color={
+                    analysis.allergyList.length > 0 ? "#FF5252" : "#E0E0E0"
+                  }
+                />
+                {analysis.allergyList.length > 0 && (
+                  <Text style={styles.alertDetailText}>
+                    {analysis.allergyList.join(", ")}
+                  </Text>
+                )}
+
+                {/* 식약처 규제 성분 */}
+                {analysis.dangerCount > 0 && (
+                  <>
+                    <AlertRow
+                      title="식약처 규제 성분 (배합금지/한도)"
+                      count={analysis.dangerCount}
+                      color="#D32F2F"
+                    />
+                    <View style={styles.harmfulListContainer}>
+                      {product.ingredients
+                        .filter((i) => i.isHarmful)
+                        .map((ing, idx) => (
+                          <View key={idx} style={styles.harmfulItem}>
+                            <Text style={styles.harmfulName}>{ing.name}</Text>
+                            <Text style={styles.harmfulReason}>
+                              {ing.division || "규제"}
+                            </Text>
+                          </View>
+                        ))}
+                    </View>
+                  </>
+                )}
+              </View>
+            </>
+          ) : (
+            <Text style={{ color: "#888", marginTop: 10 }}>분석 정보 없음</Text>
+          )}
         </View>
 
         <View style={styles.divider} />
@@ -278,7 +535,6 @@ export default function ProductDetailScreen() {
               <Text style={styles.writeReviewText}>리뷰 쓰기</Text>
             </TouchableOpacity>
           </View>
-
           {reviews.map((review) => (
             <View key={review.id} style={styles.reviewItem}>
               <View style={styles.reviewHeader}>
@@ -303,41 +559,38 @@ export default function ProductDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* 리뷰 작성 모달 */}
+      {/* 리뷰 모달 (생략 - 기존 유지) */}
       <Modal animationType="slide" transparent={true} visible={modalVisible}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>리뷰 작성</Text>
-
             <View style={styles.starInputRow}>
-              {[1, 2, 3, 4, 5].map((value) => (
-                <TouchableOpacity key={value} onPress={() => setRating(value)}>
+              {[1, 2, 3, 4, 5].map((val) => (
+                <TouchableOpacity key={val} onPress={() => setRating(val)}>
                   <Ionicons
-                    name={value <= rating ? "star" : "star-outline"}
+                    name={val <= rating ? "star" : "star-outline"}
                     size={32}
                     color="#FFD700"
                   />
                 </TouchableOpacity>
               ))}
             </View>
-
             <TextInput
               style={styles.textInput}
-              placeholder="이 제품에 대한 솔직한 리뷰를 남겨주세요."
+              placeholder="내용 입력"
               multiline
               value={reviewContent}
               onChangeText={setReviewContent}
             />
-
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.btnTextBlack}>취소</Text>
+                <Text>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.submitBtn} onPress={submitReview}>
-                <Text style={styles.btnTextWhite}>등록</Text>
+                <Text style={{ color: "#fff" }}>등록</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -359,7 +612,17 @@ const styles = StyleSheet.create({
   infoContainer: { padding: 20 },
   brandName: { color: "#888", fontSize: 14, marginBottom: 4 },
   productName: { fontSize: 22, fontWeight: "bold", marginBottom: 8 },
-  price: { fontSize: 20, fontWeight: "600", color: "#FF2D78" },
+  priceRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  price: { fontSize: 20, fontWeight: "600", color: "#FF2D78", marginRight: 10 },
+  ratingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF8E1",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  ratingText: { fontWeight: "bold", marginLeft: 4, color: "#333" },
   bookmarkButton: {
     position: "absolute",
     right: 20,
@@ -369,17 +632,103 @@ const styles = StyleSheet.create({
   divider: { height: 8, backgroundColor: "#F4F4F4" },
   section: { padding: 20 },
   sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 15 },
-  ingredientSummary: {
+
+  // 아코디언 등
+  infoSectionContainer: { backgroundColor: "#fff" },
+  expandableContainer: { borderBottomWidth: 1, borderBottomColor: "#eee" },
+  expandableHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#fff",
+  },
+  expandableTitle: { fontSize: 16, fontWeight: "600", color: "#333" },
+  expandableContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: "#fdfdfd",
+  },
+  infoRow: { flexDirection: "row", marginBottom: 8 },
+  infoLabel: { width: 100, fontSize: 14, color: "#888", fontWeight: "500" },
+  infoValue: { flex: 1, fontSize: 14, color: "#333" },
+  longTextContainer: { marginBottom: 10 },
+  longTextLabel: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  longTextValue: { fontSize: 14, color: "#555", lineHeight: 20 },
+  infoDesc: { fontSize: 13, color: "#666", lineHeight: 18 },
+
+  // 성분 분석 그래프
+  compositionContainer: { marginTop: 10, marginBottom: 20 },
+  compositionLabels: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f9f9f9",
+    marginBottom: 10,
+    flexWrap: "wrap",
+  },
+  compLabel: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginRight: 10,
+    color: "#333",
+  },
+  compValue: { color: "#666", fontWeight: "normal" },
+  compBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+  },
+  compBadgeText: { fontSize: 11, fontWeight: "bold" },
+  graphBar: {
+    flexDirection: "row",
+    height: 10,
+    borderRadius: 5,
+    overflow: "hidden",
+    backgroundColor: "#F0F0F0",
+    width: "100%",
+  },
+
+  dividerThin: { height: 1, backgroundColor: "#EEE", marginVertical: 10 },
+  alertContainer: { marginTop: 10 },
+  alertRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  alertLeft: { flexDirection: "row", alignItems: "center" },
+  alertTitle: { fontSize: 14, color: "#555", marginLeft: 8 },
+  alertCount: { fontSize: 14, fontWeight: "bold" },
+  alertDetailText: {
+    fontSize: 12,
+    color: "#888",
+    paddingLeft: 26,
+    paddingBottom: 10,
+    lineHeight: 18,
+  },
+
+  harmfulListContainer: {
+    marginTop: 15,
+    backgroundColor: "#FFF0F0",
     padding: 15,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FFCDD2",
   },
-  ingredientBadge: { alignItems: "center", marginRight: 15 },
-  badgeLabel: { fontSize: 12, color: "#666" },
-  badgeValue: { fontSize: 18, fontWeight: "bold" },
-  ingredientDesc: { flex: 1, fontSize: 14, color: "#333" },
+  harmfulItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  harmfulName: { fontSize: 14, color: "#333" },
+  harmfulReason: { fontSize: 14, color: "#D32F2F", fontWeight: "600" },
+
+  // 리뷰 등
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -449,6 +798,4 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-  btnTextBlack: { color: "#333", fontWeight: "bold" },
-  btnTextWhite: { color: "#fff", fontWeight: "bold" },
 });
