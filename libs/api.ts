@@ -127,7 +127,7 @@ interface ProductDetailResponse {
     description?: string;
     imageUrl?: string;
     category?: string;
-    ingredients?: string[];
+    ingredients?: any[]; // 상세 객체 배열을 받도록 수정
     [key: string]: unknown;
   };
 }
@@ -203,9 +203,14 @@ export const ProductApi = {
   // 상품 상세 조회
   getDetail: (id: string | string[]) => 
     fetchClient<ProductDetailResponse>(`/products/${id}`),
-  // 상품 목록 조회
-  getList: (page = 0, size = 20) =>
-    fetchClient<ProductListResponse>(`/products?page=${page}&size=${size}`),
+  // 상품 목록 조회 (카테고리 필터 추가)
+  getList: (page = 0, size = 20, categoryId?: number | null) => {
+    let url = `/products?page=${page}&size=${size}`;
+    if (categoryId) {
+      url += `&categoryId=${categoryId}`;
+    }
+    return fetchClient<ProductListResponse>(url);
+  },
 };
 
 export const ReviewApi = {
