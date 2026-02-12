@@ -88,7 +88,11 @@ export default function SignupScreen() {
       }
     } catch (error) {
       console.error(error);
-      setErrorMessage("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage("오류가 발생했습니다.");
+      }
     } finally {
       setLoading(false);
     }
