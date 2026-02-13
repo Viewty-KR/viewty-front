@@ -197,6 +197,21 @@ interface BookmarkToggleResponse {
   };
 }
 
+interface BookmarkItem {
+  bookmarked: boolean | null;
+  bookmarkId: number;
+  productId: number;
+  productName: string;
+  productImgUrl: string;
+  createdAt: string | null;
+}
+
+interface BookmarkListResponse {
+  success: boolean;
+  message?: string;
+  data: BookmarkItem[];
+}
+
 // --- 도메인별 API 함수들 ---
 
 export const ProductApi = {
@@ -227,6 +242,9 @@ export const ReviewApi = {
 };
 
 export const BookmarkApi = {
+  // 북마크 목록 조회
+  getList: () => fetchClient<BookmarkListResponse>(`/bookmarks`),
+
   // 북마크 상태 확인
   getStatus: (userId: number, productId: string | string[]) =>
     fetchClient<BookmarkStatusResponse>(
