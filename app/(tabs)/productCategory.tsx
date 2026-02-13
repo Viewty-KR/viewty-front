@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -22,23 +22,11 @@ interface ProductListItem {
   imgUrl?: string;
 }
 
-const CATEGORIES = [
-  { id: null, name: "전체" },
-  { id: 1, name: "스킨케어" },
-  { id: 2, name: "로션" },
-  { id: 3, name: "에센스/앰플" },
-  { id: 4, name: "미스트/오일" },
-  { id: 5, name: "립메이크업" },
-  { id: 6, name: "베이스" },
-  { id: 7, name: "아이메이크업" },
-];
-
-const BASE_URL = "http://localhost:8080";
-
 export default function ProductCategoryScreen() {
   const router = useRouter();
   const { 
     products, 
+    categories,
     loading, 
     errorMessage, 
     selectedCategory, 
@@ -48,6 +36,13 @@ export default function ProductCategoryScreen() {
     totalElements,
     setPage
   } = useProducts();
+
+  // "전체" 카테고리를 포함한 목록을 메모이제이션하여 렌더링 최적화 및 데이터 유실 방지
+  const allCategories = useMemo(() => {
+    const list = [{ id: null, name: "전체" }, ...categories];
+    console.log("렌더링할 카테고리 목록:", list.map(c => c.name));
+    return list;
+  }, [categories]);
 
   const getSafeImageUrl = (url?: string) => {
     if (!url) return "https://via.placeholder.com/150?text=No+Image";
@@ -133,12 +128,12 @@ export default function ProductCategoryScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ title: "카테고리" }} />
       
-      {/* 카테고리 탭 바 */}
+      {/* 카테고리 탭 바 (DB 데이터를 통한 동적 생성) */}
       <View style={styles.categoryContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {CATEGORIES.map((cat) => (
+          {allCategories.map((cat) => (
             <TouchableOpacity
-              key={String(cat.id)}
+              key={cat.id === null ? "all" : String(cat.id)}
               style={[
                 styles.categoryTab,
                 selectedCategory === cat.id && styles.categoryTabActive,
@@ -171,7 +166,7 @@ export default function ProductCategoryScreen() {
           data={products}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          numColumns={2} // 화해처럼 2열로 표시
+          numColumns={2} 
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.listContent}
           ListFooterComponent={renderPagination}

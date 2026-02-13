@@ -39,12 +39,25 @@ export const useProducts = (): UseProductsReturn => {
    */
   const loadCategories = useCallback(async () => {
     try {
+      console.log("카테고리 로딩 시작...");
       const response = await ProductApi.getCategories();
-      if (response.success && response.data) {
-        setCategories(response.data);
+      console.log("카테고리 응답 원본:", JSON.stringify(response));
+      
+      let categoryList = [];
+      
+      if (response && response.success && Array.isArray(response.data)) {
+        categoryList = response.data;
+      } else if (Array.isArray(response)) {
+        categoryList = response;
+      } else if (response && response.data && Array.isArray(response.data.content)) {
+        // 혹시 페이징 처리가 되어 있을 경우 대비
+        categoryList = response.data.content;
       }
+
+      console.log("가공된 카테고리 목록 (개수):", categoryList.length);
+      setCategories(categoryList);
     } catch (error) {
-      console.error("카테고리 로딩 실패:", error);
+      console.error("카테고리 로딩 에러 상세:", error);
     }
   }, []);
 
