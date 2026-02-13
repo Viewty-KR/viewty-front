@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { BookmarkApi } from "../../libs/api";
 
-interface BookmarkItem {
+export interface BookmarkItem {
   bookmarked: boolean | null;
   bookmarkId: number;
   productId: number;
@@ -10,17 +10,17 @@ interface BookmarkItem {
   createdAt: string | null;
 }
 
-export const useBookmarklist = () => {
-  const [bookmarklist, setBookmarklist] = useState<BookmarkItem[]>([]);
+export const useBookmarkList = () => {
+  const [bookmarkList, setBookmarkList] = useState<BookmarkItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBookmarklist = async () => {
+    const fetchBookmarkList = async () => {
       try {
         const response = await BookmarkApi.getList();
         if (response.success && response.data) {
-          setBookmarklist(response.data); // data is now the array
+          setBookmarkList(response.data);
         } else {
           setError(response.message || "찜 목록을 불러오는데 실패했습니다.");
         }
@@ -32,10 +32,8 @@ export const useBookmarklist = () => {
       }
     };
 
-    fetchBookmarklist();
+    fetchBookmarkList();
   }, []);
 
-  return { bookmarklist, loading, error };
+  return { bookmarkList, loading, error };
 };
-
-export { BookmarkItem };

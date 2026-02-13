@@ -9,10 +9,10 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useBookmarklist, BookmarkItem } from "../bookmarklist.utils";
+import { useBookmarkList, BookmarkItem } from "../bookmarkList.utils";
 
-const Bookmarklist = () => {
-  const { bookmarklist, loading, error } = useBookmarklist();
+const BookmarkList = () => {
+  const { bookmarkList, loading, error } = useBookmarkList();
   const router = useRouter();
 
   if (loading) {
@@ -32,7 +32,7 @@ const Bookmarklist = () => {
     );
   }
 
-  if (bookmarklist.length === 0) {
+  if (bookmarkList.length === 0) {
     return (
       <View style={styles.centered}>
         <Text>찜한 상품이 없습니다.</Text>
@@ -55,16 +55,15 @@ const Bookmarklist = () => {
       />
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.productName}</Text>
-        {/* <Text style={styles.itemBrand}>{item.brand}</Text> */}
       </View>
     </TouchableOpacity>
   );
 
   return (
     <FlatList
-      data={bookmarklist}
+      data={bookmarkList}
       renderItem={renderItem}
-      keyExtractor={(item) => item.bookmarkId.toString()} // Assuming bookmarkId is unique
+      keyExtractor={(item) => item.bookmarkId.toString()}
       contentContainerStyle={styles.listContainer}
     />
   );
@@ -107,10 +106,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  itemBrand: {
-    fontSize: 14,
-    color: "#666",
-  },
 });
 
-export default Bookmarklist;
+export default BookmarkList;

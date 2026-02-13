@@ -14,6 +14,7 @@ import { useProfile, useLogout } from "./profile.utils";
 import { profileStyles } from "./profile.style";
 import SurveyQuestions from "./components/SurveyQuestions";
 import { ProfileHookResult } from "./profile.types";
+import BookmarkList from "./components/BookmarkList";
 
 const LogoutButton = () => {
   const { handleLogout } = useLogout();
@@ -129,13 +130,47 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
   );
 };
 
-import Bookmarklist from "./components/Bookmarklist";
-
 const Reviews = () => (
   <View style={profileStyles.section}>
     <Text style={profileStyles.sectionTitle}>내가 작성한 리뷰</Text>
     <Text>작성한 리뷰가 여기에 표시됩니다.</Text>
   </View>
+);
+
+const ProfileHeader = ({
+  activeTab,
+  setActiveTab,
+}: {
+  activeTab: string;
+  setActiveTab: React.Dispatch<React.SetStateAction<string>>;
+}) => (
+  <>
+    <View style={profileStyles.customHeader}>
+      <Text style={profileStyles.customHeaderTitle}>마이 페이지</Text>
+      <LogoutButton />
+    </View>
+
+    <View style={styles.tabContainer}>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === "info" && styles.activeTab]}
+        onPress={() => setActiveTab("info")}
+      >
+        <Text style={styles.tabText}>회원정보</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === "bookmarklist" && styles.activeTab]}
+        onPress={() => setActiveTab("bookmarklist")}
+      >
+        <Text style={styles.tabText}>내가찜한목록</Text>
+      </TouchableOpacity>
+      {/* <TouchableOpacity
+        style={[styles.tab, activeTab === "reviews" && styles.activeTab]}
+        onPress={() => setActiveTab("reviews")}
+      >
+        <Text style={styles.tabText}>내가 작성한 리뷰</Text>
+      </TouchableOpacity> */}
+    </View>
+  </>
 );
 
 export default function ProfileScreen() {
@@ -160,43 +195,25 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={profileStyles.container}>
-      <View style={profileStyles.customHeader}>
-        <Text style={profileStyles.customHeaderTitle}>마이 페이지</Text>
-        <LogoutButton />
-      </View>
-
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "info" && styles.activeTab]}
-          onPress={() => setActiveTab("info")}
-        >
-          <Text style={styles.tabText}>회원정보</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "bookmarklist" && styles.activeTab]}
-          onPress={() => setActiveTab("bookmarklist")}
-        >
-          <Text style={styles.tabText}>내가찜한목록</Text>
-        </TouchableOpacity>
-        {/* <TouchableOpacity
-          style={[styles.tab, activeTab === "reviews" && styles.activeTab]}
-          onPress={() => setActiveTab("reviews")}
-        >
-          <Text style={styles.tabText}>내가 작성한 리뷰</Text>
-        </TouchableOpacity> */}
-      </View>
-
-      {activeTab === "info" && <MemberInfo profileData={profileData} />}
-      {activeTab === "bookmarklist" && <Bookmarklist />}
-      {activeTab === "reviews" && <Reviews />}
-
-      {!profileData.userData && !profileData.loading && (
-        <View style={profileStyles.centered}>
-          <Text>표시할 데이터가 없습니다.</Text>
+    <>
+      {activeTab === "info" ? (
+        <ScrollView style={profileStyles.container}>
+          <ProfileHeader activeTab={activeTab} setActiveTab={setActiveTab} />
+          <MemberInfo profileData={profileData} />
+          {!profileData.userData && !profileData.loading && (
+            <View style={profileStyles.centered}>
+              <Text>표시할 데이터가 없습니다.</Text>
+            </View>
+          )}
+        </ScrollView>
+      ) : (
+        <View style={profileStyles.container}>
+          <ProfileHeader activeTab={activeTab} setActiveTab={setActiveTab} />
+          {activeTab === "bookmarklist" && <BookmarkList />}
+          {activeTab === "reviews" && <Reviews />}
         </View>
       )}
-    </ScrollView>
+    </>
   );
 }
 
