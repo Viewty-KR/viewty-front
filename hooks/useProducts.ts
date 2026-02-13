@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { ProductApi } from "../libs/api";
+import { useEffect, useState, useCallback } from "react";
+import { ProductApi, Product } from "../libs/api";
 import { LookItem, TrendingItem } from "../screens/home/index.types";
 import { extractProducts, mapToLook, mapToTrending } from "../screens/home/index.utils";
 
 interface UseProductsReturn {
-  products: any[];
+  products: Product[];
+  categories: any[];
   trendingItems: TrendingItem[];
   curatedLooks: LookItem[];
   errorMessage: string | null;
@@ -16,12 +17,14 @@ interface UseProductsReturn {
   setCategory: (categoryId: number | null) => void;
   setPage: (page: number) => void;
   loadProducts: () => Promise<void>;
+  loadCategories: () => Promise<void>;
   handleRetry: () => void;
   handleCloseError: () => void;
 }
 
 export const useProducts = (): UseProductsReturn => {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
   const [curatedLooks, setCuratedLooks] = useState<LookItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -31,7 +34,21 @@ export const useProducts = (): UseProductsReturn => {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
 
-  const loadProducts = async () => {
+  /**
+   * 카테고리 목록 로드
+   */
+  const loadCategories = useCallback(async () => {
+    try {
+      const response = await ProductApi.getCategories();
+      if (response.success && response.data) {
+        setCategories(response.data);
+      }
+    } catch (error) {
+      console.error("카테고리 로딩 실패:", error);
+    }
+  }, []);
+
+  const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       setErrorMessage(null);
@@ -79,11 +96,15 @@ export const useProducts = (): UseProductsReturn => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, selectedCategory]); // 의존성 배열에 currentPage와 selectedCategory 추가
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
 
   useEffect(() => {
     loadProducts();
-  }, [selectedCategory, currentPage]); // 카테고리나 페이지 변경 시 리로드
+  }, [loadProducts]); // 메모이제이션된 loadProducts를 의존성으로 사용
 
   const setCategory = (id: number | null) => {
     setSelectedCategory(id);
@@ -105,6 +126,7 @@ export const useProducts = (): UseProductsReturn => {
 
   return {
     products,
+    categories,
     trendingItems,
     curatedLooks,
     errorMessage,
@@ -116,6 +138,7 @@ export const useProducts = (): UseProductsReturn => {
     setCategory,
     setPage,
     loadProducts,
+    loadCategories,
     handleRetry,
     handleCloseError,
   };

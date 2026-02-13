@@ -17,7 +17,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
       }}
-    > 
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -32,7 +32,7 @@ export default function TabLayout() {
         options={{
           title: "Category",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="square.grid.2x2.fill" color={color} />
+            <IconSymbol size={28} name="viewfinder" color={color} />
           ),
         }}
       />
@@ -50,7 +50,11 @@ export default function TabLayout() {
         options={{
           title: "My Page",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.crop.circle.fill" color={color} />
+            <IconSymbol
+              size={28}
+              name="person.crop.circle.fill"
+              color={color}
+            />
           ),
         }}
         listeners={{

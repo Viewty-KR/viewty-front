@@ -20,6 +20,7 @@ const MAPPING = {
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   'person.crop.circle.fill': 'person',
+  'viewfinder':'category',
 } as IconMapping;
 
 /**

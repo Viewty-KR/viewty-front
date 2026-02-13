@@ -19,21 +19,12 @@ interface ProductListItem {
   manufacturer?: string;
 }
 
-// DB 기준 카테고리 목록
-const CATEGORIES = [
-  { id: null, name: "전체" },
-  { id: 1, name: "스킨케어" },
-  { id: 2, name: "로션" },
-  { id: 3, name: "에센스/앰플" },
-  { id: 4, name: "미스트/오일" },
-  { id: 5, name: "립메이크업" },
-  { id: 6, name: "베이스" },
-  { id: 7, name: "아이메이크업" },
-];
-
 const ProductListScreen = () => {
   const router = useRouter();
-  const { products, loading, errorMessage, selectedCategory, setCategory } = useProducts();
+  const { products, categories, loading, errorMessage, selectedCategory, setCategory } = useProducts();
+
+  // "전체" 카테고리 추가
+  const allCategories = [{ id: null, name: "전체" }, ...categories];
 
   if (errorMessage)
     return (
@@ -57,12 +48,12 @@ const ProductListScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* 카테고리 탭 바 */}
+      {/* 카테고리 탭 바 (DB 데이터를 통한 동적 생성) */}
       <View style={styles.categoryContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {CATEGORIES.map((cat) => (
+          {allCategories.map((cat) => (
             <TouchableOpacity
-              key={String(cat.id)}
+              key={cat.id === null ? "all" : String(cat.id)}
               style={[
                 styles.categoryTab,
                 selectedCategory === cat.id && styles.categoryTabActive,

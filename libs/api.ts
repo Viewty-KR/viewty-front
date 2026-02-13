@@ -116,19 +116,40 @@ interface UserProfileResponse {
   };
 }
 
+export interface Ingredient {
+  name: string;
+  isHarmful: boolean;
+  isCaution: boolean;
+  isAllergy: boolean;
+  division?: string;
+  effectiveness?: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  brand?: string;
+  price?: number;
+  imageUrl?: string;
+  capacity?: string;
+  specifications?: string;
+  expiryDate?: string;
+  usageMethod?: string;
+  country?: string;
+  isFunctional?: string;
+  precautions?: string;
+  qa?: string;
+  csNumber?: string;
+  deliveryFee?: string;
+  deliveryJejuFee?: string;
+  allIngredients?: string;
+}
+
 interface ProductDetailResponse {
   success: boolean;
   message?: string;
-  data: {
-    id: string;
-    name: string;
-    brand?: string;
-    price?: number;
-    description?: string;
-    imageUrl?: string;
-    category?: string;
-    ingredients?: any[]; // 상세 객체 배열을 받도록 수정
-    [key: string]: unknown;
+  data: Product & {
+    ingredients?: Ingredient[];
   };
 }
 
@@ -136,14 +157,7 @@ interface ProductListResponse {
   success: boolean;
   message?: string;
   data: {
-    content: {
-      id: string;
-      name: string;
-      brand?: string;
-      price?: number;
-      imageUrl?: string;
-      [key: string]: unknown;
-    }[];
+    content: Product[];
     totalElements: number;
     totalPages: number;
     size: number;
@@ -197,6 +211,18 @@ interface BookmarkToggleResponse {
   };
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  cateCode?: string;
+}
+
+interface CategoryListResponse {
+  success: boolean;
+  message?: string;
+  data: Category[];
+}
+
 // --- 도메인별 API 함수들 ---
 
 export const ProductApi = {
@@ -211,6 +237,9 @@ export const ProductApi = {
     }
     return fetchClient<ProductListResponse>(url);
   },
+  // 카테고리 목록 조회
+  getCategories: () => 
+    fetchClient<CategoryListResponse>('/products/categories'),
 };
 
 export const ReviewApi = {
