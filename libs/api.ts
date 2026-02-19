@@ -261,6 +261,9 @@ export const ReviewApi = {
 };
 
 export const BookmarkApi = {
+  // 북마크 목록 조회
+  getList: () => fetchClient<BookmarkListResponse>(`/bookmarks`),
+
   // 북마크 상태 확인
   getStatus: (userId: number, productId: string | string[]) =>
     fetchClient<BookmarkStatusResponse>(
