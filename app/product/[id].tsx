@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ProductApi, ReviewApi, BookmarkApi } from "../../libs/api";
+import { ProductApi, ReviewApi, BookmarkApi, IMAGE_BASE_URL } from "../../libs/api";
 import {
   analyzeIngredients,
   IngredientAnalysisResult,
@@ -31,8 +31,6 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const BASE_URL = "http://localhost:8080";
-
 // --- [타입 정의] ---
 interface Ingredient {
   name: string;
@@ -42,6 +40,12 @@ interface Ingredient {
   isAllergy?: boolean;
 }
 
+interface ProductOption {
+  id: number;
+  optionName: string;
+  price: number;
+}
+
 interface ProductDetail {
   id: number;
   name: string;
@@ -49,6 +53,7 @@ interface ProductDetail {
   manufacturer: string;
   ingredients: Ingredient[];
   harmfulIngredientCount: number;
+  options?: ProductOption[]; // [추가] 옵션 목록
   img_url?: string;
   imgUrl?: string;
   // 상세 정보
@@ -204,6 +209,32 @@ const AlertRow = ({
   </View>
 );
 
+// --- [컴포넌트] 목적별 성분 행 ---
+const PurposeRow = ({ 
+  title, 
+  list, 
+  icon, 
+  color 
+}: { 
+  title: string; 
+  list: string[]; 
+  icon: any; 
+  color: string;
+}) => {
+  if (!list || list.length === 0) return null;
+  return (
+    <View style={styles.purposeRow}>
+      <View style={[styles.purposeIconContainer, { backgroundColor: color + '15' }]}>
+        <Ionicons name={icon} size={20} color={color} />
+      </View>
+      <View style={styles.purposeTextContainer}>
+        <Text style={[styles.purposeTitle, { color: color }]}>{title}</Text>
+        <Text style={styles.purposeListText}>{list.join(', ')}</Text>
+      </View>
+    </View>
+  );
+};
+
 // =========================================================================
 // 메인 스크린
 // =========================================================================
@@ -298,9 +329,9 @@ export default function ProductDetailScreen() {
     if (!url) return "https://via.placeholder.com/300?text=No+Image";
     return url.startsWith("http") || url.startsWith("/")
       ? url.startsWith("/")
-        ? `${BASE_URL}${url}`
+        ? `${IMAGE_BASE_URL}${url}`
         : url
-      : `${BASE_URL}/${url}`;
+      : `${IMAGE_BASE_URL}/${url}`;
   };
 
   const toggleBookmark = async () => {
@@ -374,6 +405,33 @@ export default function ProductDetailScreen() {
         <View style={styles.infoContainer}>
           <Text style={styles.brandName}>{product.manufacturer}</Text>
           <Text style={styles.productName}>{product.name}</Text>
+
+          {/* [추가] 화해 스타일 옵션 선택 바 */}
+          {product.options && product.options.length > 1 && (
+            <View style={styles.optionSelectorContainer}>
+              <Text style={styles.optionLabel}>옵션 ({product.options.length}개)</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.optionScroll}>
+                {product.options.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[
+                      styles.optionChip,
+                      product.id === opt.id && styles.optionChipActive
+                    ]}
+                    onPress={() => router.push(`/product/${opt.id}`)}
+                  >
+                    <Text style={[
+                      styles.optionChipText,
+                      product.id === opt.id && styles.optionChipTextActive
+                    ]}>
+                      {opt.optionName}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={styles.priceRow}>
             <Text style={styles.price}>
               {product.price ? product.price.toLocaleString() : 0}원
@@ -518,6 +576,34 @@ export default function ProductDetailScreen() {
                     </View>
                   </>
                 )}
+
+                <View style={styles.dividerThin} />
+                <Text style={[styles.sectionTitle, { fontSize: 16, marginTop: 10 }]}>목적별 성분</Text>
+                
+                <PurposeRow 
+                  title="피부 보습" 
+                  list={analysis.moisturizingList} 
+                  icon="water" 
+                  color="#2196F3" 
+                />
+                <PurposeRow 
+                  title="수렴 진정" 
+                  list={analysis.soothingList} 
+                  icon="leaf" 
+                  color="#4CAF50" 
+                />
+                <PurposeRow 
+                  title="피부 보호" 
+                  list={analysis.protectionList} 
+                  icon="shield-checkmark" 
+                  color="#9C27B0" 
+                />
+                <PurposeRow 
+                  title="피부 미백" 
+                  list={analysis.brighteningList} 
+                  icon="sunny" 
+                  color="#FF9800" 
+                />
               </View>
             </>
           ) : (
@@ -612,6 +698,45 @@ const styles = StyleSheet.create({
   infoContainer: { padding: 20 },
   brandName: { color: "#888", fontSize: 14, marginBottom: 4 },
   productName: { fontSize: 22, fontWeight: "bold", marginBottom: 8 },
+
+  // 옵션 선택기
+  optionSelectorContainer: {
+    marginVertical: 15,
+    padding: 12,
+    backgroundColor: "#F9F9F9",
+    borderRadius: 8,
+  },
+  optionLabel: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 8,
+    fontWeight: "600",
+  },
+  optionScroll: {
+    flexDirection: "row",
+  },
+  optionChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#DDD",
+    marginRight: 8,
+  },
+  optionChipActive: {
+    backgroundColor: "#FF2D78",
+    borderColor: "#FF2D78",
+  },
+  optionChipText: {
+    fontSize: 12,
+    color: "#666",
+  },
+  optionChipTextActive: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+
   priceRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
   price: { fontSize: 20, fontWeight: "600", color: "#FF2D78", marginRight: 10 },
   ratingBadge: {
@@ -727,6 +852,35 @@ const styles = StyleSheet.create({
   },
   harmfulName: { fontSize: 14, color: "#333" },
   harmfulReason: { fontSize: 14, color: "#D32F2F", fontWeight: "600" },
+
+  // 목적별 성분
+  purposeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 15,
+    paddingVertical: 5,
+  },
+  purposeIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  purposeTextContainer: {
+    flex: 1,
+  },
+  purposeTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  purposeListText: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
 
   // 리뷰 등
   rowBetween: {

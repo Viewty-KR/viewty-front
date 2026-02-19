@@ -4,41 +4,40 @@ import { getToken } from "../hooks/useToken";
 
 // API 기본 URL을 환경/플랫폼에 맞춰 결정한다.
 const resolveBaseUrl = () => {
-  const expoExtra =
-    (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined) ??
-    (Constants.manifest2?.extra as { apiBaseUrl?: string } | undefined);
-
-  const configuredUrl =
-    process.env.EXPO_PUBLIC_API_URL ?? expoExtra?.apiBaseUrl ?? null;
-
-  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
-
-  if (Platform.OS === "android") return "http://10.0.2.2:8080/api";
-  if (Platform.OS === "ios") return "http://localhost:8080/api";
-  return "http://localhost:8080/api";
+  // 디버깅을 위해 직접 고정값 사용 (안드로이드 에뮬레이터 10.0.2.2)
+  if (Platform.OS === "android") return "http://10.0.2.2:8080";
+  return "http://localhost:8080";
 };
 
-const BASE_URL = resolveBaseUrl();
+export const IMAGE_BASE_URL = resolveBaseUrl();
+export const BASE_URL = `${IMAGE_BASE_URL}/api`;
 
 // 공통 fetch 래퍼 함수 (에러 처리 및 JSON 변환)
 const fetchClient = async <T>(
   endpoint: string,
   options?: RequestInit,
 ): Promise<T> => {
+  const safeEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const fullUrl = `${BASE_URL}${safeEndpoint}`;
+  console.log(`[API CALL] ${fullUrl}`);
+
   try {
     const token = await getToken();
 
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetch(fullUrl, {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json", // JSON 명시
         ...(token && { Authorization: `Bearer ${token}` }),
         ...(options?.headers || {}),
       },
     });
 
+    console.log(`[API RESPONSE] Status: ${response.status} at ${fullUrl}`);
+
     const rawBody = await response.text();
-    let parsedBody: unknown = null;
+    let parsedBody: any = null;
 
     if (rawBody) {
       try {
@@ -49,25 +48,26 @@ const fetchClient = async <T>(
     }
 
     if (!response.ok) {
-      const errorMessage =
-        (parsedBody as any)?.message || response.statusText || "Request failed";
-      const error = new Error(errorMessage);
+      console.error(
+        `[API ERROR] ${response.status} - ${JSON.stringify(parsedBody)}`,
+      );
+      const error = new Error(parsedBody?.message || "Request failed");
       (error as any).status = response.status;
-      (error as any).data = parsedBody;
       throw error;
     }
 
+    // 백엔드 ApiResponse 구조 대응
     if (
       parsedBody &&
       typeof parsedBody === "object" &&
-      "success" in (parsedBody as Record<string, unknown>)
+      "success" in parsedBody
     ) {
       return parsedBody as T;
     }
 
     return { success: true, data: parsedBody } as T;
   } catch (error) {
-    console.error(`API Error (${BASE_URL}${endpoint}):`, error);
+    console.error(`[Fetch Catch] ${fullUrl}:`, error);
     throw error;
   }
 };
@@ -116,19 +116,40 @@ interface UserProfileResponse {
   };
 }
 
+export interface Ingredient {
+  name: string;
+  isHarmful: boolean;
+  isCaution: boolean;
+  isAllergy: boolean;
+  division?: string;
+  effectiveness?: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  brand?: string;
+  price?: number;
+  imageUrl?: string;
+  capacity?: string;
+  specifications?: string;
+  expiryDate?: string;
+  usageMethod?: string;
+  country?: string;
+  isFunctional?: string;
+  precautions?: string;
+  qa?: string;
+  csNumber?: string;
+  deliveryFee?: string;
+  deliveryJejuFee?: string;
+  allIngredients?: string;
+}
+
 interface ProductDetailResponse {
   success: boolean;
   message?: string;
-  data: {
-    id: string;
-    name: string;
-    brand?: string;
-    price?: number;
-    description?: string;
-    imageUrl?: string;
-    category?: string;
-    ingredients?: string[];
-    [key: string]: unknown;
+  data: Product & {
+    ingredients?: Ingredient[];
   };
 }
 
@@ -136,14 +157,7 @@ interface ProductListResponse {
   success: boolean;
   message?: string;
   data: {
-    content: {
-      id: string;
-      name: string;
-      brand?: string;
-      price?: number;
-      imageUrl?: string;
-      [key: string]: unknown;
-    }[];
+    content: Product[];
     totalElements: number;
     totalPages: number;
     size: number;
@@ -197,6 +211,18 @@ interface BookmarkToggleResponse {
   };
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  cateCode?: string;
+}
+
+interface CategoryListResponse {
+  success: boolean;
+  message?: string;
+  data: Category[];
+}
+
 interface BookmarkItem {
   bookmarked: boolean | null;
   bookmarkId: number;
@@ -216,18 +242,26 @@ interface BookmarkListResponse {
 
 export const ProductApi = {
   // 상품 상세 조회
-  getDetail: (id: string | string[]) => 
+  getDetail: (id: string | string[]) =>
     fetchClient<ProductDetailResponse>(`/products/${id}`),
-  // 상품 목록 조회
-  getList: (page = 0, size = 20) =>
-    fetchClient<ProductListResponse>(`/products?page=${page}&size=${size}`),
+  // 상품 목록 조회 (카테고리 필터 추가)
+  getList: (page = 0, size = 20, categoryId?: number | null) => {
+    let url = `/products?page=${page}&size=${size}`;
+    if (categoryId) {
+      url += `&categoryId=${categoryId}`;
+    }
+    return fetchClient<ProductListResponse>(url);
+  },
+  // 카테고리 목록 조회
+  getCategories: () =>
+    fetchClient<CategoryListResponse>("/products/categories"),
 };
 
 export const ReviewApi = {
   // 리뷰 목록 조회
   getList: (productId: string | string[], page = 0, size = 10) =>
     fetchClient<ReviewListResponse>(
-      `/reviews?productId=${productId}&page=${page}&size=${size}`
+      `/reviews?productId=${productId}&page=${page}&size=${size}`,
     ),
 
   // 리뷰 등록
@@ -248,7 +282,7 @@ export const BookmarkApi = {
   // 북마크 상태 확인
   getStatus: (userId: number, productId: string | string[]) =>
     fetchClient<BookmarkStatusResponse>(
-      `/bookmarks/status?userId=${userId}&productId=${productId}`
+      `/bookmarks/status?userId=${userId}&productId=${productId}`,
     ),
 
   // 북마크 토글 (등록/해제)
@@ -257,7 +291,7 @@ export const BookmarkApi = {
       `/bookmarks/toggle?userId=${userId}&productId=${productId}`,
       {
         method: "POST",
-      }
+      },
     ),
 };
 

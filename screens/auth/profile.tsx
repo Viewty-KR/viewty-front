@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -7,14 +7,11 @@ import {
   TextInput,
   Button,
   TouchableOpacity,
-  StyleSheet,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter } from "expo-router"; // useRouter 추가
 import { useProfile, useLogout } from "./profile.utils";
 import { profileStyles } from "./profile.style";
-import SurveyQuestions from "./components/SurveyQuestions";
-import { ProfileHookResult } from "./profile.types";
-import BookmarkList from "./components/BookmarkList";
+import SurveyQuestions from "./components/SurveyQuestions"; // SurveyQuestions 컴포넌트 import
 
 const LogoutButton = () => {
   const { handleLogout } = useLogout();
@@ -23,7 +20,7 @@ const LogoutButton = () => {
   const handlePress = () => {
     if (confirm("정말 로그아웃 하시겠습니까?")) {
       handleLogout();
-      router.replace("/auth/login");
+      router.replace("/auth/login"); // 로그인 화면으로 리다이렉트
     }
   };
 
@@ -34,9 +31,11 @@ const LogoutButton = () => {
   );
 };
 
-const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
+export default function ProfileScreen() {
   const {
+    loading,
     userData,
+    error,
     passwordUpdateMessage,
     passwordUpdateLoading,
     updateMessage,
@@ -58,11 +57,32 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
     setSelectedPoreSize,
     handlePasswordUpdate,
     handleUpdate,
-    loading,
-  } = profileData;
+  } = useProfile();
+
+  if (loading && !userData) {
+    return (
+      <View style={profileStyles.centered}>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text>데이터 로딩 중...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={profileStyles.centered}>
+        <Text style={profileStyles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
-    <>
+    <ScrollView style={profileStyles.container}>
+      <View style={profileStyles.customHeader}>
+        <Text style={profileStyles.customHeaderTitle}>마이 페이지</Text>
+        <LogoutButton />
+      </View>
+
       {userData && (
         <View style={profileStyles.section}>
           <Text style={profileStyles.sectionTitle}>회원 정보</Text>
@@ -100,6 +120,7 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
 
       <View style={profileStyles.section}>
         <Text style={profileStyles.sectionTitle}>피부 설문 수정</Text>
+
         <SurveyQuestions
           selectedConcerns={selectedConcerns}
           toggleConcern={toggleConcern}
@@ -126,113 +147,12 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
           disabled={loading}
         />
       </View>
-    </>
-  );
-};
 
-const Reviews = () => (
-  <View style={profileStyles.section}>
-    <Text style={profileStyles.sectionTitle}>내가 작성한 리뷰</Text>
-    <Text>작성한 리뷰가 여기에 표시됩니다.</Text>
-  </View>
-);
-
-const ProfileHeader = ({
-  activeTab,
-  setActiveTab,
-}: {
-  activeTab: string;
-  setActiveTab: React.Dispatch<React.SetStateAction<string>>;
-}) => (
-  <>
-    <View style={profileStyles.customHeader}>
-      <Text style={profileStyles.customHeaderTitle}>마이 페이지</Text>
-      <LogoutButton />
-    </View>
-
-    <View style={styles.tabContainer}>
-      <TouchableOpacity
-        style={[styles.tab, activeTab === "info" && styles.activeTab]}
-        onPress={() => setActiveTab("info")}
-      >
-        <Text style={styles.tabText}>회원정보</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.tab, activeTab === "bookmarklist" && styles.activeTab]}
-        onPress={() => setActiveTab("bookmarklist")}
-      >
-        <Text style={styles.tabText}>내가찜한목록</Text>
-      </TouchableOpacity>
-      {/* <TouchableOpacity
-        style={[styles.tab, activeTab === "reviews" && styles.activeTab]}
-        onPress={() => setActiveTab("reviews")}
-      >
-        <Text style={styles.tabText}>내가 작성한 리뷰</Text>
-      </TouchableOpacity> */}
-    </View>
-  </>
-);
-
-export default function ProfileScreen() {
-  const [activeTab, setActiveTab] = useState("info");
-  const profileData = useProfile();
-
-  if (profileData.loading && !profileData.userData) {
-    return (
-      <View style={profileStyles.centered}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text>데이터 로딩 중...</Text>
-      </View>
-    );
-  }
-
-  if (profileData.error) {
-    return (
-      <View style={profileStyles.centered}>
-        <Text style={profileStyles.errorText}>{profileData.error}</Text>
-      </View>
-    );
-  }
-
-  return (
-    <>
-      {activeTab === "info" ? (
-        <ScrollView style={profileStyles.container}>
-          <ProfileHeader activeTab={activeTab} setActiveTab={setActiveTab} />
-          <MemberInfo profileData={profileData} />
-          {!profileData.userData && !profileData.loading && (
-            <View style={profileStyles.centered}>
-              <Text>표시할 데이터가 없습니다.</Text>
-            </View>
-          )}
-        </ScrollView>
-      ) : (
-        <View style={profileStyles.container}>
-          <ProfileHeader activeTab={activeTab} setActiveTab={setActiveTab} />
-          {activeTab === "bookmarklist" && <BookmarkList />}
-          {activeTab === "reviews" && <Reviews />}
+      {!userData && !loading && (
+        <View style={profileStyles.centered}>
+          <Text>표시할 데이터가 없습니다.</Text>
         </View>
       )}
-    </>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  tabContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#f0f0f0",
-    paddingVertical: 10,
-  },
-  tab: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#007AFF",
-  },
-  tabText: {
-    fontWeight: "bold",
-  },
-});
