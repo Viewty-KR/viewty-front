@@ -13,6 +13,7 @@ import {
 import { useProducts } from "../../hooks/useProducts";
 import { useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { IMAGE_BASE_URL } from "../../libs/api";
 
 interface ProductListItem {
   id: number;
@@ -48,9 +49,9 @@ export default function ProductCategoryScreen() {
     if (!url) return "https://via.placeholder.com/150?text=No+Image";
     return url.startsWith("http") || url.startsWith("/")
       ? url.startsWith("/")
-        ? `${BASE_URL}${url}`
+        ? `${IMAGE_BASE_URL}${url}`
         : url
-      : `${BASE_URL}/${url}`;
+      : `${IMAGE_BASE_URL}/${url}`;
   };
 
   const renderItem: ListRenderItem<ProductListItem> = ({ item }) => (

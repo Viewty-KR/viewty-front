@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ProductApi, ReviewApi, BookmarkApi } from "../../libs/api";
+import { ProductApi, ReviewApi, BookmarkApi, IMAGE_BASE_URL } from "../../libs/api";
 import {
   analyzeIngredients,
   IngredientAnalysisResult,
@@ -30,8 +30,6 @@ if (
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-const BASE_URL = "http://localhost:8080";
 
 // --- [타입 정의] ---
 interface Ingredient {
@@ -331,9 +329,9 @@ export default function ProductDetailScreen() {
     if (!url) return "https://via.placeholder.com/300?text=No+Image";
     return url.startsWith("http") || url.startsWith("/")
       ? url.startsWith("/")
-        ? `${BASE_URL}${url}`
+        ? `${IMAGE_BASE_URL}${url}`
         : url
-      : `${BASE_URL}/${url}`;
+      : `${IMAGE_BASE_URL}/${url}`;
   };
 
   const toggleBookmark = async () => {

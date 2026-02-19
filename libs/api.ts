@@ -4,41 +4,40 @@ import { getToken } from "../hooks/useToken";
 
 // API 기본 URL을 환경/플랫폼에 맞춰 결정한다.
 const resolveBaseUrl = () => {
-  const expoExtra =
-    (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined) ??
-    (Constants.manifest2?.extra as { apiBaseUrl?: string } | undefined);
-
-  const configuredUrl =
-    process.env.EXPO_PUBLIC_API_URL ?? expoExtra?.apiBaseUrl ?? null;
-
-  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
-
-  if (Platform.OS === "android") return "http://10.0.2.2:8080/api";
-  if (Platform.OS === "ios") return "http://localhost:8080/api";
-  return "http://localhost:8080/api";
+  // 디버깅을 위해 직접 고정값 사용 (안드로이드 에뮬레이터 10.0.2.2)
+  if (Platform.OS === "android") return "http://10.0.2.2:8080";
+  return "http://localhost:8080";
 };
 
-const BASE_URL = resolveBaseUrl();
+export const IMAGE_BASE_URL = resolveBaseUrl();
+export const BASE_URL = `${IMAGE_BASE_URL}/api`;
 
 // 공통 fetch 래퍼 함수 (에러 처리 및 JSON 변환)
 const fetchClient = async <T>(
   endpoint: string,
   options?: RequestInit,
 ): Promise<T> => {
+  const safeEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const fullUrl = `${BASE_URL}${safeEndpoint}`;
+  console.log(`[API CALL] ${fullUrl}`);
+
   try {
     const token = await getToken();
 
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetch(fullUrl, {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json", // JSON 명시
         ...(token && { Authorization: `Bearer ${token}` }),
         ...(options?.headers || {}),
       },
     });
 
+    console.log(`[API RESPONSE] Status: ${response.status} at ${fullUrl}`);
+
     const rawBody = await response.text();
-    let parsedBody: unknown = null;
+    let parsedBody: any = null;
 
     if (rawBody) {
       try {
@@ -49,25 +48,20 @@ const fetchClient = async <T>(
     }
 
     if (!response.ok) {
-      const errorMessage =
-        (parsedBody as any)?.message || response.statusText || "Request failed";
-      const error = new Error(errorMessage);
+      console.error(`[API ERROR] ${response.status} - ${JSON.stringify(parsedBody)}`);
+      const error = new Error(parsedBody?.message || "Request failed");
       (error as any).status = response.status;
-      (error as any).data = parsedBody;
       throw error;
     }
 
-    if (
-      parsedBody &&
-      typeof parsedBody === "object" &&
-      "success" in (parsedBody as Record<string, unknown>)
-    ) {
+    // 백엔드 ApiResponse 구조 대응
+    if (parsedBody && typeof parsedBody === "object" && "success" in parsedBody) {
       return parsedBody as T;
     }
 
     return { success: true, data: parsedBody } as T;
   } catch (error) {
-    console.error(`API Error (${BASE_URL}${endpoint}):`, error);
+    console.error(`[Fetch Catch] ${fullUrl}:`, error);
     throw error;
   }
 };
