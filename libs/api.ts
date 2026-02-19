@@ -48,14 +48,20 @@ const fetchClient = async <T>(
     }
 
     if (!response.ok) {
-      console.error(`[API ERROR] ${response.status} - ${JSON.stringify(parsedBody)}`);
+      console.error(
+        `[API ERROR] ${response.status} - ${JSON.stringify(parsedBody)}`,
+      );
       const error = new Error(parsedBody?.message || "Request failed");
       (error as any).status = response.status;
       throw error;
     }
 
     // 백엔드 ApiResponse 구조 대응
-    if (parsedBody && typeof parsedBody === "object" && "success" in parsedBody) {
+    if (
+      parsedBody &&
+      typeof parsedBody === "object" &&
+      "success" in parsedBody
+    ) {
       return parsedBody as T;
     }
 
@@ -217,11 +223,26 @@ interface CategoryListResponse {
   data: Category[];
 }
 
+interface BookmarkItem {
+  bookmarked: boolean | null;
+  bookmarkId: number;
+  productId: number;
+  productName: string;
+  productImgUrl: string;
+  createdAt: string | null;
+}
+
+interface BookmarkListResponse {
+  success: boolean;
+  message?: string;
+  data: BookmarkItem[];
+}
+
 // --- 도메인별 API 함수들 ---
 
 export const ProductApi = {
   // 상품 상세 조회
-  getDetail: (id: string | string[]) => 
+  getDetail: (id: string | string[]) =>
     fetchClient<ProductDetailResponse>(`/products/${id}`),
   // 상품 목록 조회 (카테고리 필터 추가)
   getList: (page = 0, size = 20, categoryId?: number | null) => {
@@ -232,15 +253,15 @@ export const ProductApi = {
     return fetchClient<ProductListResponse>(url);
   },
   // 카테고리 목록 조회
-  getCategories: () => 
-    fetchClient<CategoryListResponse>('/products/categories'),
+  getCategories: () =>
+    fetchClient<CategoryListResponse>("/products/categories"),
 };
 
 export const ReviewApi = {
   // 리뷰 목록 조회
   getList: (productId: string | string[], page = 0, size = 10) =>
     fetchClient<ReviewListResponse>(
-      `/reviews?productId=${productId}&page=${page}&size=${size}`
+      `/reviews?productId=${productId}&page=${page}&size=${size}`,
     ),
 
   // 리뷰 등록
@@ -255,10 +276,13 @@ export const ReviewApi = {
 };
 
 export const BookmarkApi = {
+  // 북마크 목록 조회
+  getList: () => fetchClient<BookmarkListResponse>(`/bookmarks`),
+
   // 북마크 상태 확인
   getStatus: (userId: number, productId: string | string[]) =>
     fetchClient<BookmarkStatusResponse>(
-      `/bookmarks/status?userId=${userId}&productId=${productId}`
+      `/bookmarks/status?userId=${userId}&productId=${productId}`,
     ),
 
   // 북마크 토글 (등록/해제)
@@ -267,7 +291,7 @@ export const BookmarkApi = {
       `/bookmarks/toggle?userId=${userId}&productId=${productId}`,
       {
         method: "POST",
-      }
+      },
     ),
 };
 
