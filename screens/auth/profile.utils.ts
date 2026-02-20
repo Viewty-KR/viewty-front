@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import { AuthApi } from "../../libs/api";
 import { getToken, removeToken } from "../../hooks/useToken";
 import { UserData, AuthResponse, ProfileHookResult } from "./profile.types";
+import { router } from "expo-router";
 
 if (Platform.OS === "web" && typeof atob === "undefined") {
   global.atob = (input) => Buffer.from(input, "base64").toString("binary");
@@ -37,6 +38,7 @@ export const useProfile = (): ProfileHookResult => {
       const token = await getToken();
       if (!token) {
         setError("로그인이 필요합니다.");
+        router.replace("/auth/login");
         setLoading(false);
         return;
       }
