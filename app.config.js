@@ -50,6 +50,7 @@ module.exports = {
     extra: {
       // 프로덕션 기본값: Nginx 리버스 프록시 사용
       apiBaseUrl: process.env.API_BASE_URL || "/api",
+      androidApiBaseUrl: process.env.ANDROID_API_BASE_URL || "/api",
     },
   },
 };

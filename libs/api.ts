@@ -6,23 +6,28 @@ import { getToken, removeToken } from "../hooks/useToken";
 const resolveBaseUrl = () => {
 
   const expoExtra =
-    (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined) ??
-    (Constants.manifest2?.extra as { apiBaseUrl?: string } | undefined);
+    (Constants.expoConfig?.extra as { apiBaseUrl?: string, androidApiBaseUrl?: string } | undefined) ??
+    (Constants.manifest2?.extra as { apiBaseUrl?: string, androidApiBaseUrl?: string } | undefined);
 
-  const configuredUrl =
-    process.env.EXPO_PUBLIC_API_URL ?? expoExtra?.apiBaseUrl ?? null;
+  let configuredUrl = null;
+  if (Platform.OS === "android") {
+    configuredUrl = process.env.EXPO_PUBLIC_ANDROID_API_URL ?? expoExtra?.androidApiBaseUrl ?? null;
+  } else {
+    configuredUrl = process.env.EXPO_PUBLIC_API_URL ?? expoExtra?.apiBaseUrl ?? null;
+  }
 
   if (configuredUrl) {
-    if (Platform.OS === "android") return "http://10.0.2.2:8080";
     return configuredUrl.replace(/\/$/, "");
   } else{
-    if (Platform.OS === "android") return "http://10.0.2.2:8080";
-    return "http://localhost:8080";
+    if (Platform.OS === "android") {
+      return "http://10.0.2.2:8080/api";
+    }else{
+      return "http://localhost:8080/api";
+    }
   }
 };
 
-export const IMAGE_BASE_URL = resolveBaseUrl();
-export const BASE_URL = `${IMAGE_BASE_URL}/api`;
+export const BASE_URL = resolveBaseUrl();
 
 // 공통 fetch 래퍼 함수 (에러 처리 및 JSON 변환)
 const fetchClient = async <T>(
