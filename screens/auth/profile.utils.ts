@@ -56,7 +56,6 @@ export const useProfile = (): ProfileHookResult => {
         if (err.message === "토큰이 만료되었습니다.") {
           setError("로그인이 만료되었습니다. 다시 로그인해주세요.");
           await removeToken();
-          router.replace("/auth/login");
           return;
         }
         console.error(err);
