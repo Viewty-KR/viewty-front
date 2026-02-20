@@ -4,9 +4,21 @@ import { getToken, removeToken } from "../hooks/useToken";
 
 // API 기본 URL을 환경/플랫폼에 맞춰 결정한다.
 const resolveBaseUrl = () => {
-  // 디버깅을 위해 직접 고정값 사용 (안드로이드 에뮬레이터 10.0.2.2)
-  if (Platform.OS === "android") return "http://10.0.2.2:8080";
-  return "http://localhost:8080";
+
+  const expoExtra =
+    (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined) ??
+    (Constants.manifest2?.extra as { apiBaseUrl?: string } | undefined);
+
+  const configuredUrl =
+    process.env.EXPO_PUBLIC_API_URL ?? expoExtra?.apiBaseUrl ?? null;
+
+  if (configuredUrl) {
+    if (Platform.OS === "android") return "http://10.0.2.2:8080";
+    return configuredUrl.replace(/\/$/, "");
+  } else{
+    if (Platform.OS === "android") return "http://10.0.2.2:8080";
+    return "http://localhost:8080";
+  }
 };
 
 export const IMAGE_BASE_URL = resolveBaseUrl();
