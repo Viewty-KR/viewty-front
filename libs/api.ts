@@ -1,7 +1,6 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { getToken, removeToken } from "../hooks/useToken";
-import { router } from "expo-router";
 
 // API 기본 URL을 환경/플랫폼에 맞춰 결정한다.
 const resolveBaseUrl = () => {

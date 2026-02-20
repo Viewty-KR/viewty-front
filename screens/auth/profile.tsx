@@ -24,7 +24,6 @@ const LogoutButton = () => {
   const handlePress = () => {
     if (confirm("정말 로그아웃 하시겠습니까?")) {
       handleLogout();
-      router.replace("/auth/login");
     }
   };
 
