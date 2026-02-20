@@ -70,7 +70,6 @@ const fetchClient = async <T>(
   } catch (error) {
     if (error instanceof Error && error.message === "토큰이 만료되었습니다.") {
       await removeToken();
-      router.replace("/auth/login");
     }
     console.error(`[Fetch Catch] ${fullUrl}:`, error);
     throw error;

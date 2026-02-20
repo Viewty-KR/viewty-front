@@ -15,6 +15,7 @@ import { profileStyles } from "./profile.style";
 import SurveyQuestions from "./components/SurveyQuestions";
 import { ProfileHookResult } from "./profile.types";
 import BookmarkList from "./components/BookmarkList";
+import MyReviews from "./components/MyReviews";
 
 const LogoutButton = () => {
   const { handleLogout } = useLogout();
@@ -130,8 +131,6 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
   );
 };
 
-import MyReviews from "./components/MyReviews";
-
 const ProfileHeader = ({
   activeTab,
   setActiveTab,
@@ -149,18 +148,29 @@ const ProfileHeader = ({
       <TouchableOpacity
         style={[styles.tab, activeTab === "info" && styles.activeTab]}
         onPress={() => setActiveTab("info")}
+        accessibilityRole="tab"
+        accessibilityLabel="회원정보 탭"
+        accessibilityState={{ selected: activeTab === "info" }}
       >
         <Text style={styles.tabText}>회원정보</Text>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.tab, activeTab === "bookmarklist" && styles.activeTab]}
         onPress={() => setActiveTab("bookmarklist")}
+        accessibilityRole="tab"
+        accessibilityLabel="내가 찜한 목록 탭"
+        accessibilityState={{ selected: activeTab === "bookmarklist" }}
       >
-        <Text style={styles.tabText}>내가찜한목록</Text>
+        <Text style={styles.tabText}>내가 찜한 목록</Text>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.tab, activeTab === "reviews" && styles.activeTab]}
         onPress={() => setActiveTab("reviews")}
+        accessibilityRole="tab"
+        accessibilityLabel="내가 작성한 리뷰 탭"
+        accessibilityState={{ selected: activeTab === "reviews" }}
       >
         <Text style={styles.tabText}>내가 작성한 리뷰</Text>
       </TouchableOpacity>
