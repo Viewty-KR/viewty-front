@@ -4,24 +4,31 @@ import { getToken, removeToken } from "../hooks/useToken";
 
 // API 기본 URL을 환경/플랫폼에 맞춰 결정한다.
 const resolveBaseUrl = () => {
-
   const expoExtra =
-    (Constants.expoConfig?.extra as { apiBaseUrl?: string, androidApiBaseUrl?: string } | undefined) ??
-    (Constants.manifest2?.extra as { apiBaseUrl?: string, androidApiBaseUrl?: string } | undefined);
+    (Constants.expoConfig?.extra as
+      | { apiBaseUrl?: string; androidApiBaseUrl?: string }
+      | undefined) ??
+    (Constants.manifest2?.extra as
+      | { apiBaseUrl?: string; androidApiBaseUrl?: string }
+      | undefined);
 
   let configuredUrl = null;
   if (Platform.OS === "android") {
-    configuredUrl = process.env.EXPO_PUBLIC_ANDROID_API_URL ?? expoExtra?.androidApiBaseUrl ?? null;
+    configuredUrl =
+      process.env.EXPO_PUBLIC_ANDROID_API_URL ??
+      expoExtra?.androidApiBaseUrl ??
+      null;
   } else {
-    configuredUrl = process.env.EXPO_PUBLIC_API_URL ?? expoExtra?.apiBaseUrl ?? null;
+    configuredUrl =
+      process.env.EXPO_PUBLIC_API_URL ?? expoExtra?.apiBaseUrl ?? null;
   }
 
   if (configuredUrl) {
     return configuredUrl.replace(/\/$/, "");
-  } else{
+  } else {
     if (Platform.OS === "android") {
       return "http://10.0.2.2:8080/api";
-    }else{
+    } else {
       return "http://localhost:8080/api";
     }
   }
@@ -317,6 +324,22 @@ export const ReviewApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  // 리뷰 수정
+  update: (reviewId: number, data: { content: string; rating: number }) =>
+    fetchClient<ReviewCreateResponse>(`/reviews/${reviewId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  // 리뷰 삭제
+  delete: (reviewId: number) =>
+    fetchClient<{ success: boolean; message?: string }>(
+      `/reviews/${reviewId}`,
+      {
+        method: "DELETE",
+      },
+    ),
 };
 
 export const BookmarkApi = {

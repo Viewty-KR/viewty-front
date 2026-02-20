@@ -17,12 +17,13 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ProductApi, ReviewApi, BookmarkApi, IMAGE_BASE_URL } from "../../libs/api";
+import { ProductApi, ReviewApi, BookmarkApi, BASE_URL } from "../../libs/api";
 import {
   analyzeIngredients,
   IngredientAnalysisResult,
 } from "./ingredientUtils";
-
+import { getToken } from "../../hooks/useToken";
+import { jwtDecode } from "jwt-decode";
 // 안드로이드 애니메이션 활성화
 if (
   Platform.OS === "android" &&
@@ -73,6 +74,7 @@ interface ProductDetail {
 
 interface Review {
   id: number;
+  userId?: string | number;
   name: string;
   content: string;
   rating: number;
@@ -210,26 +212,28 @@ const AlertRow = ({
 );
 
 // --- [컴포넌트] 목적별 성분 행 ---
-const PurposeRow = ({ 
-  title, 
-  list, 
-  icon, 
-  color 
-}: { 
-  title: string; 
-  list: string[]; 
-  icon: any; 
+const PurposeRow = ({
+  title,
+  list,
+  icon,
+  color,
+}: {
+  title: string;
+  list: string[];
+  icon: any;
   color: string;
 }) => {
   if (!list || list.length === 0) return null;
   return (
     <View style={styles.purposeRow}>
-      <View style={[styles.purposeIconContainer, { backgroundColor: color + '15' }]}>
+      <View
+        style={[styles.purposeIconContainer, { backgroundColor: color + "15" }]}
+      >
         <Ionicons name={icon} size={20} color={color} />
       </View>
       <View style={styles.purposeTextContainer}>
         <Text style={[styles.purposeTitle, { color: color }]}>{title}</Text>
-        <Text style={styles.purposeListText}>{list.join(', ')}</Text>
+        <Text style={styles.purposeListText}>{list.join(", ")}</Text>
       </View>
     </View>
   );
@@ -239,6 +243,7 @@ const PurposeRow = ({
 // 메인 스크린
 // =========================================================================
 export default function ProductDetailScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams();
   const productId =
     typeof id === "string" ? id : Array.isArray(id) ? id[0] : undefined;
@@ -253,10 +258,14 @@ export default function ProductDetailScreen() {
 
   // 리뷰 모달
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
   const [reviewContent, setReviewContent] = useState("");
   const [rating, setRating] = useState(5);
 
-  const CURRENT_USER_ID = 1;
+  const [currentUserId, setCurrentUserId] = useState<string | number | null>(
+    null,
+  );
+
   const DEFAULT_USER_NAME = "익명";
 
   useEffect(() => {
@@ -267,11 +276,31 @@ export default function ProductDetailScreen() {
 
   const fetchData = async (targetId: string) => {
     try {
-      const [prodRes, markRes, reviewRes] = await Promise.all([
+      const token = await getToken();
+      let userId: string | number | null = null;
+      if (token) {
+        try {
+          const decoded: any = jwtDecode(token);
+          userId = decoded.sub || decoded.userId || decoded.id;
+          setCurrentUserId(userId);
+        } catch (e) {
+          console.error("Token decode error:", e);
+        }
+      }
+
+      const requests: any[] = [
         ProductApi.getDetail(targetId),
-        BookmarkApi.getStatus(CURRENT_USER_ID, targetId),
         ReviewApi.getList(targetId),
-      ]);
+      ];
+
+      if (userId) {
+        requests.push(BookmarkApi.getStatus(userId as any, targetId));
+      }
+
+      const results = await Promise.all(requests);
+      const prodRes = results[0];
+      const reviewRes = results[1];
+      const markRes = userId ? results[2] : null;
 
       if (prodRes.success) {
         const raw = (prodRes.data ?? {}) as Record<string, unknown>;
@@ -297,7 +326,7 @@ export default function ProductDetailScreen() {
         }
       }
 
-      if (markRes.success) {
+      if (markRes && markRes.success) {
         const bookmarkData = markRes.data as unknown as { bookmarked: boolean };
         setIsBookmarked(bookmarkData.bookmarked);
       }
@@ -307,6 +336,7 @@ export default function ProductDetailScreen() {
         if (pageData && Array.isArray(pageData.content)) {
           const mappedReviews: Review[] = pageData.content.map((item: any) => ({
             id: item.id,
+            userId: item.userId,
             name: item.name,
             content: item.content,
             rating: item.rating,
@@ -329,18 +359,43 @@ export default function ProductDetailScreen() {
     if (!url) return "https://via.placeholder.com/300?text=No+Image";
     return url.startsWith("http") || url.startsWith("/")
       ? url.startsWith("/")
-        ? `${IMAGE_BASE_URL}${url}`
+        ? `${BASE_URL}${url}`
         : url
-      : `${IMAGE_BASE_URL}/${url}`;
+      : `${BASE_URL}/${url}`;
   };
 
   const toggleBookmark = async () => {
-    if (!productId) return;
+    if (!productId || !currentUserId) {
+      Alert.alert("알림", "로그인이 필요한 서비스입니다.");
+      return;
+    }
     try {
-      const res = await BookmarkApi.toggle(CURRENT_USER_ID, productId);
+      const res = await BookmarkApi.toggle(currentUserId as any, productId);
       if (res.success) setIsBookmarked(!isBookmarked);
     } catch (error) {
       Alert.alert("오류", "북마크 변경 실패");
+    }
+  };
+
+  const handleEditReview = (review: Review) => {
+    setEditingReviewId(review.id);
+    setReviewContent(review.content);
+    setRating(review.rating);
+    setModalVisible(true);
+  };
+
+  const handleDeleteReview = async (reviewId: number) => {
+    if (confirm("정말 이 리뷰를 삭제하시겠습니까?")) {
+      try {
+        const res = await ReviewApi.delete(reviewId);
+        if (res.success) {
+          alert("리뷰가 삭제되었습니다.");
+          if (productId) fetchData(productId);
+        }
+      } catch (error) {
+        console.error("삭제 에러:", error);
+        alert("리뷰 삭제 실패");
+      }
     }
   };
 
@@ -349,19 +404,36 @@ export default function ProductDetailScreen() {
     if (!reviewContent.trim())
       return Alert.alert("알림", "내용을 입력해주세요.");
     try {
-      const res = await ReviewApi.create(productId, {
-        name: DEFAULT_USER_NAME,
-        content: reviewContent,
-        rating: rating,
-      });
+      let res;
+      if (editingReviewId) {
+        res = await ReviewApi.update(editingReviewId, {
+          content: reviewContent,
+          rating: rating,
+        });
+      } else {
+        res = await ReviewApi.create(productId, {
+          name: DEFAULT_USER_NAME,
+          content: reviewContent,
+          rating: rating,
+        });
+      }
+
       if (res.success) {
-        Alert.alert("성공", "리뷰 등록 완료");
+        Alert.alert(
+          "성공",
+          editingReviewId ? "리뷰 수정 완료" : "리뷰 등록 완료",
+        );
         setModalVisible(false);
+        setEditingReviewId(null);
         setReviewContent("");
+        setRating(5);
         fetchData(productId); // 리뷰 목록 새로고침
       }
     } catch (error) {
-      Alert.alert("오류", "리뷰 등록 실패");
+      Alert.alert(
+        "오류",
+        editingReviewId ? "리뷰 수정 실패" : "리뷰 등록 실패",
+      );
     }
   };
 
@@ -409,21 +481,29 @@ export default function ProductDetailScreen() {
           {/* [추가] 화해 스타일 옵션 선택 바 */}
           {product.options && product.options.length > 1 && (
             <View style={styles.optionSelectorContainer}>
-              <Text style={styles.optionLabel}>옵션 ({product.options.length}개)</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.optionScroll}>
+              <Text style={styles.optionLabel}>
+                옵션 ({product.options.length}개)
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.optionScroll}
+              >
                 {product.options.map((opt) => (
                   <TouchableOpacity
                     key={opt.id}
                     style={[
                       styles.optionChip,
-                      product.id === opt.id && styles.optionChipActive
+                      product.id === opt.id && styles.optionChipActive,
                     ]}
                     onPress={() => router.push(`/product/${opt.id}`)}
                   >
-                    <Text style={[
-                      styles.optionChipText,
-                      product.id === opt.id && styles.optionChipTextActive
-                    ]}>
+                    <Text
+                      style={[
+                        styles.optionChipText,
+                        product.id === opt.id && styles.optionChipTextActive,
+                      ]}
+                    >
                       {opt.optionName}
                     </Text>
                   </TouchableOpacity>
@@ -578,31 +658,35 @@ export default function ProductDetailScreen() {
                 )}
 
                 <View style={styles.dividerThin} />
-                <Text style={[styles.sectionTitle, { fontSize: 16, marginTop: 10 }]}>목적별 성분</Text>
-                
-                <PurposeRow 
-                  title="피부 보습" 
-                  list={analysis.moisturizingList} 
-                  icon="water" 
-                  color="#2196F3" 
+                <Text
+                  style={[styles.sectionTitle, { fontSize: 16, marginTop: 10 }]}
+                >
+                  목적별 성분
+                </Text>
+
+                <PurposeRow
+                  title="피부 보습"
+                  list={analysis.moisturizingList}
+                  icon="water"
+                  color="#2196F3"
                 />
-                <PurposeRow 
-                  title="수렴 진정" 
-                  list={analysis.soothingList} 
-                  icon="leaf" 
-                  color="#4CAF50" 
+                <PurposeRow
+                  title="수렴 진정"
+                  list={analysis.soothingList}
+                  icon="leaf"
+                  color="#4CAF50"
                 />
-                <PurposeRow 
-                  title="피부 보호" 
-                  list={analysis.protectionList} 
-                  icon="shield-checkmark" 
-                  color="#9C27B0" 
+                <PurposeRow
+                  title="피부 보호"
+                  list={analysis.protectionList}
+                  icon="shield-checkmark"
+                  color="#9C27B0"
                 />
-                <PurposeRow 
-                  title="피부 미백" 
-                  list={analysis.brighteningList} 
-                  icon="sunny" 
-                  color="#FF9800" 
+                <PurposeRow
+                  title="피부 미백"
+                  list={analysis.brighteningList}
+                  icon="sunny"
+                  color="#FF9800"
                 />
               </View>
             </>
@@ -617,24 +701,54 @@ export default function ProductDetailScreen() {
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <Text style={styles.sectionTitle}>리뷰 ({reviews.length})</Text>
-            <TouchableOpacity onPress={() => setModalVisible(true)}>
+            <TouchableOpacity
+              onPress={() => {
+                setEditingReviewId(null);
+                setReviewContent("");
+                setRating(5);
+                setModalVisible(true);
+              }}
+            >
               <Text style={styles.writeReviewText}>리뷰 쓰기</Text>
             </TouchableOpacity>
           </View>
           {reviews.map((review) => (
             <View key={review.id} style={styles.reviewItem}>
               <View style={styles.reviewHeader}>
-                <Text style={styles.reviewerName}>{review.name}</Text>
-                <View style={styles.starRow}>
-                  {[...Array(5)].map((_, i) => (
-                    <Ionicons
-                      key={i}
-                      name={i < review.rating ? "star" : "star-outline"}
-                      size={14}
-                      color="#FFD700"
-                    />
-                  ))}
+                <View style={styles.reviewerInfo}>
+                  <Text style={styles.reviewerName}>{review.name}</Text>
+                  <Text style={styles.reviewerName}></Text>
+                  <View style={styles.starRow}>
+                    {[...Array(5)].map((_, i) => (
+                      <Ionicons
+                        key={i}
+                        name={i < review.rating ? "star" : "star-outline"}
+                        size={14}
+                        color="#FFD700"
+                      />
+                    ))}
+                  </View>
                 </View>
+                {review.userId === currentUserId && (
+                  <View style={styles.reviewActions}>
+                    <TouchableOpacity
+                      onPress={() => handleEditReview(review)}
+                      style={styles.actionBtn}
+                    >
+                      <Text style={styles.actionBtnText}>수정</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteReview(review.id)}
+                      style={styles.actionBtn}
+                    >
+                      <Text
+                        style={[styles.actionBtnText, { color: "#FF5252" }]}
+                      >
+                        삭제
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
               <Text style={styles.reviewContent}>{review.content}</Text>
               <Text style={styles.reviewDate}>
@@ -645,11 +759,18 @@ export default function ProductDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* 리뷰 모달 (생략 - 기존 유지) */}
-      <Modal animationType="slide" transparent={true} visible={modalVisible}>
+      {/* 리뷰 모달 */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>리뷰 작성</Text>
+            <Text style={styles.modalTitle}>
+              {editingReviewId ? "리뷰 수정" : "리뷰 작성"}
+            </Text>
             <View style={styles.starInputRow}>
               {[1, 2, 3, 4, 5].map((val) => (
                 <TouchableOpacity key={val} onPress={() => setRating(val)}>
@@ -671,12 +792,17 @@ export default function ProductDetailScreen() {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelBtn}
-                onPress={() => setModalVisible(false)}
+                onPress={() => {
+                  setModalVisible(false);
+                  setEditingReviewId(null);
+                }}
               >
                 <Text>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.submitBtn} onPress={submitReview}>
-                <Text style={{ color: "#fff" }}>등록</Text>
+                <Text style={{ color: "#fff" }}>
+                  {editingReviewId ? "수정" : "등록"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -855,8 +981,8 @@ const styles = StyleSheet.create({
 
   // 목적별 성분
   purposeRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 15,
     paddingVertical: 5,
   },
@@ -864,8 +990,8 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   purposeTextContainer: {
@@ -873,12 +999,12 @@ const styles = StyleSheet.create({
   },
   purposeTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
   },
   purposeListText: {
     fontSize: 13,
-    color: '#666',
+    color: "#666",
     lineHeight: 18,
   },
 
@@ -901,7 +1027,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   reviewerName: { fontWeight: "bold", fontSize: 14 },
-  starRow: { flexDirection: "row" },
+  reviewerInfo: { flex: 1 },
+  reviewActions: { flexDirection: "row", alignItems: "center" },
+  actionBtn: { marginLeft: 12, paddingVertical: 4 },
+  actionBtnText: { fontSize: 13, color: "#888", fontWeight: "500" },
+  starRow: { flexDirection: "row", marginTop: 2 },
   reviewContent: {
     fontSize: 14,
     color: "#333",
