@@ -1,6 +1,7 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import { getToken } from "../hooks/useToken";
+import { getToken, removeToken } from "../hooks/useToken";
+import { router } from "expo-router";
 
 // API 기본 URL을 환경/플랫폼에 맞춰 결정한다.
 const resolveBaseUrl = () => {
@@ -67,6 +68,10 @@ const fetchClient = async <T>(
 
     return { success: true, data: parsedBody } as T;
   } catch (error) {
+    if (error instanceof Error && error.message === "토큰이 만료되었습니다.") {
+      await removeToken();
+      router.replace("/auth/login");
+    }
     console.error(`[Fetch Catch] ${fullUrl}:`, error);
     throw error;
   }
@@ -238,6 +243,27 @@ interface BookmarkListResponse {
   data: BookmarkItem[];
 }
 
+export interface MyReviewItem {
+  id: number;
+  productId: number;
+  productName: string;
+  productImgUrl: string;
+  productPrice: number;
+  categoryId: number;
+  categoryName: string;
+  categoryCode: string;
+  name: string | null;
+  content: string;
+  rating: number;
+  createdAt: string | null;
+}
+
+export interface MyReviewListResponse {
+  success: boolean;
+  message?: string;
+  data: MyReviewItem[];
+}
+
 // --- 도메인별 API 함수들 ---
 
 export const ProductApi = {
@@ -263,6 +289,9 @@ export const ReviewApi = {
     fetchClient<ReviewListResponse>(
       `/reviews?productId=${productId}&page=${page}&size=${size}`,
     ),
+
+  // 내가 작성한 리뷰 목록 조회
+  getMyReviews: () => fetchClient<MyReviewListResponse>(`/reviews/myReview`),
 
   // 리뷰 등록
   create: (
