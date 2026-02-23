@@ -1,5 +1,5 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
 import React from "react";
 import {
   Image,
@@ -32,7 +32,17 @@ export default function HomeScreen() {
     errorMessage,
     handleRetry,
     handleCloseError,
+    loadProducts,
+    loadCategories,
   } = useProducts();
+
+  // 화면이 포커스될 때만 데이터 로드
+  useFocusEffect(
+    React.useCallback(() => {
+      loadCategories();
+      loadProducts();
+    }, [loadCategories, loadProducts])
+  );
 
   const handleOpenProduct = (productId: number | string) => {
     router.push({

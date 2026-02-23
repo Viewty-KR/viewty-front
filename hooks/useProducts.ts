@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { ProductApi, Product } from "../libs/api";
+import { useCallback, useState } from "react";
+import { Product, ProductApi } from "../libs/api";
 import { LookItem, TrendingItem } from "../screens/home/index.types";
 import { extractProducts, mapToLook, mapToTrending } from "../screens/home/index.utils";
 
@@ -111,13 +111,14 @@ export const useProducts = (): UseProductsReturn => {
     }
   }, [currentPage, selectedCategory]); // 의존성 배열에 currentPage와 selectedCategory 추가
 
-  useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
+  // useEffect 제거 - 이제 각 화면에서 필요할 때만 명시적으로 호출
+  // useEffect(() => {
+  //   loadCategories();
+  // }, [loadCategories]);
 
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]); // 메모이제이션된 loadProducts를 의존성으로 사용
+  // useEffect(() => {
+  //   loadProducts();
+  // }, [loadProducts]);
 
   const setCategory = (id: number | null) => {
     setSelectedCategory(id);

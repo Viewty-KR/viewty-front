@@ -1,16 +1,16 @@
+import { useFocusEffect, useRouter } from "expo-router";
 import React from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
   ActivityIndicator,
+  FlatList,
   ListRenderItem,
-  StyleSheet,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useProducts } from "../../hooks/useProducts";
-import { useRouter } from "expo-router";
 
 interface ProductListItem {
   id: number;
@@ -21,7 +21,15 @@ interface ProductListItem {
 
 const ProductListScreen = () => {
   const router = useRouter();
-  const { products, categories, loading, errorMessage, selectedCategory, setCategory } = useProducts();
+  const { products, categories, loading, errorMessage, selectedCategory, setCategory, loadProducts, loadCategories } = useProducts();
+
+  // 화면이 포커스될 때만 데이터 로드
+  useFocusEffect(
+    React.useCallback(() => {
+      loadCategories();
+      loadProducts();
+    }, [loadCategories, loadProducts])
+  );
 
   // "전체" 카테고리 추가
   const allCategories = [{ id: null, name: "전체" }, ...categories];

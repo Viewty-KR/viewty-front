@@ -1,18 +1,18 @@
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useMemo } from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
   ActivityIndicator,
-  ListRenderItem,
-  StyleSheet,
-  ScrollView,
+  FlatList,
   Image,
+  ListRenderItem,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useProducts } from "../../hooks/useProducts";
-import { useRouter, Stack } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { IMAGE_BASE_URL } from "../../libs/api";
 
 interface ProductListItem {
@@ -35,8 +35,18 @@ export default function ProductCategoryScreen() {
     currentPage,
     totalPages,
     totalElements,
-    setPage
+    setPage,
+    loadProducts,
+    loadCategories,
   } = useProducts();
+
+  // 화면이 포커스될 때만 데이터 로드
+  useFocusEffect(
+    React.useCallback(() => {
+      loadCategories();
+      loadProducts();
+    }, [loadCategories, loadProducts])
+  );
 
   // "전체" 카테고리를 포함한 목록을 메모이제이션하여 렌더링 최적화 및 데이터 유실 방지
   const allCategories = useMemo(() => {
