@@ -284,15 +284,17 @@ export default function ProductDetailScreen() {
   const showAppModal = (
     message: string,
     type: "confirm" | "alert" | "error" = "alert",
-    onConfirm: () => void = () =>
-      setModalConfig((prev) => ({ ...prev, visible: false })),
+    onConfirm?: () => void,
     title?: string,
   ) => {
     setModalConfig({
       visible: true,
       message,
       type,
-      onConfirm,
+      onConfirm: () => {
+        setModalConfig((prev) => ({ ...prev, visible: false }));
+        if (onConfirm) onConfirm();
+      },
       title,
     });
   };
@@ -420,7 +422,6 @@ export default function ProductDetailScreen() {
       "리뷰를 삭제하시겠습니까?",
       "confirm",
       async () => {
-        setModalConfig((prev) => ({ ...prev, visible: false }));
         try {
           const res = await ReviewApi.delete(reviewId);
           if (res.success) {

@@ -25,11 +25,11 @@ export const useSurvey = (): SurveyHookResult => {
     null,
   );
 
-  const showModal = (message: string, action?: () => void) => {
+  const showModal = useCallback((message: string, action?: () => void) => {
     setModalMessage(message);
     setOnConfirmAction(() => action || null);
     setIsModalVisible(true);
-  };
+  }, []);
 
   useEffect(() => {
     if (!userId) {
@@ -37,7 +37,7 @@ export const useSurvey = (): SurveyHookResult => {
         router.replace("/auth/login"),
       );
     }
-  }, [userId, router]);
+  }, [userId, router, showModal]);
 
   const toggleConcern = useCallback((concern: string) => {
     setSelectedConcerns((prev) =>
@@ -123,6 +123,7 @@ export const useSurvey = (): SurveyHookResult => {
     selectedFeelingAfterWash,
     selectedAfternoonSkin,
     selectedPoreSize,
+    showModal,
   ]);
 
   const onModalConfirm = () => {
