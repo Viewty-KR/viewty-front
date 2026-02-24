@@ -71,7 +71,7 @@ export const ErrorModal = ({
       animationType="fade"
       transparent={true}
       visible={visible}
-      onRequestClose={onClose || onRetry}
+      onRequestClose={onClose || onRetry || (() => {})}
     >
       <View style={styles.overlay}>
         <View style={styles.content}>
@@ -95,7 +95,7 @@ export const ErrorModal = ({
             )}
             <TouchableOpacity
               style={[styles.button, styles.buttonPrimary]}
-              onPress={onRetry}
+              onPress={onRetry ? onRetry : () => {}}
             >
               <Text style={styles.buttonTextPrimary}>{finalConfirmText}</Text>
             </TouchableOpacity>

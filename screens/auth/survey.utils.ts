@@ -150,9 +150,7 @@ export const useSurvey = (): SurveyHookResult => {
     handleCancel,
     handleSave,
     isModalVisible,
-    setIsModalVisible,
     modalMessage,
-    setModalMessage,
     onModalConfirm,
   };
 };

@@ -464,8 +464,8 @@ export default function ProductDetailScreen() {
       if (res.success) {
         showAppModal(
           editingReviewId
-            ? "리뷰 수정 완료됐습니다."
-            : "리뷰 등록 완료됐습니다.",
+            ? "리뷰가 수정되었습니다."
+            : "리뷰가 등록되었습니다.",
         );
         setModalVisible(false);
         setEditingReviewId(null);
@@ -475,7 +475,7 @@ export default function ProductDetailScreen() {
       }
     } catch (error) {
       showAppModal(
-        editingReviewId ? "리뷰 수정 실패했습니다." : "리뷰 등록 실패했습니다.",
+        editingReviewId ? "리뷰 수정에 실패했습니다." : "리뷰 등록에 실패했습니다.",
         "error",
       );
     }
