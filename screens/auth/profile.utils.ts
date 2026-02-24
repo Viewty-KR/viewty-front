@@ -47,7 +47,7 @@ export const useProfile = (): ProfileHookResult => {
   ) => {
     setModalMessage(message);
     setModalType(type);
-    setOnConfirmAction(() => onConfirm || null);
+    setOnConfirmAction(onConfirm ? () => onConfirm() : null);
     setIsModalVisible(true);
   };
 
