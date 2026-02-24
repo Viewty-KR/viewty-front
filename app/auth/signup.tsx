@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { AuthApi } from "../../libs/api";
+import { ErrorModal } from "../../components/ErrorModal";
 
 const isValidEmail = (email: string) => {
   return /^[^@]+@[^@]+\.[^@]+$/.test(email);
@@ -24,42 +25,47 @@ export default function SignupScreen() {
     name: "",
   });
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
   const handleChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrorMessage("");
+  };
+
+  const showModal = (message: string) => {
+    setModalMessage(message);
+    setModalVisible(true);
   };
 
   const handleSubmit = async () => {
-    setErrorMessage("");
     if (!formData.id) {
-      setErrorMessage("아이디를 입력해주세요.");
+      showModal("아이디를 입력해주세요.");
       return;
     }
     if (!formData.email) {
-      setErrorMessage("이메일을 입력해주세요.");
+      showModal("이메일을 입력해주세요.");
       return;
     }
     if (!isValidEmail(formData.email)) {
-      setErrorMessage("유효한 이메일 주소를 입력해주세요.");
+      showModal("유효한 이메일 주소를 입력해주세요.");
       return;
     }
     if (!formData.name) {
-      setErrorMessage("이름을 입력해주세요.");
+      showModal("이름을 입력해주세요.");
       return;
     }
     if (!formData.password) {
-      setErrorMessage("비밀번호를 입력해주세요.");
+      showModal("비밀번호를 입력해주세요.");
       return;
     }
     if (!formData.passwordConfirm) {
-      setErrorMessage("비밀번호 확인을 입력해주세요.");
+      showModal("비밀번호 확인을 입력해주세요.");
       return;
     }
 
     if (formData.password !== formData.passwordConfirm) {
-      setErrorMessage("비밀번호가 일치하지 않습니다.");
+      showModal("비밀번호가 일치하지 않습니다.");
       return;
     }
 
@@ -75,26 +81,30 @@ export default function SignupScreen() {
 
       if (responseData.success) {
         const userIdToSend = responseData.data?.userId || formData.id;
-
-        alert("피부 진단을 시작하겠습니다.");
-        router.replace({
-          pathname: "/auth/survey",
-          params: { userId: userIdToSend },
-        });
+        setPendingUserId(userIdToSend);
+        showModal("회원가입이 완료되었습니다.\n피부 진단을 시작하겠습니다.");
       } else {
-        const messageToShow =
-          responseData.message || "회원가입에 실패했습니다.";
-        setErrorMessage(messageToShow);
+        showModal(responseData.message || "회원가입에 실패했습니다.");
       }
     } catch (error) {
       console.error(error);
       if (error instanceof Error) {
-        setErrorMessage(error.message);
+        showModal(error.message);
       } else {
-        setErrorMessage("오류가 발생했습니다.");
+        showModal("오류가 발생했습니다.");
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleModalConfirm = () => {
+    setModalVisible(false);
+    if (pendingUserId) {
+      router.replace({
+        pathname: "/auth/survey",
+        params: { userId: pendingUserId },
+      });
     }
   };
 
@@ -138,14 +148,18 @@ export default function SignupScreen() {
         onChangeText={(value) => handleChange("passwordConfirm", value)}
         secureTextEntry
       />
-      {errorMessage ? (
-        <Text style={styles.errorText}>{errorMessage}</Text>
-      ) : null}
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <Button title="가입" onPress={handleSubmit} />
       )}
+      <ErrorModal
+        visible={modalVisible}
+        type="alert"
+        title="알림"
+        message={modalMessage}
+        onRetry={handleModalConfirm}
+      />
     </View>
   );
 }

@@ -16,30 +16,42 @@ import SurveyQuestions from "./components/SurveyQuestions";
 import { ProfileHookResult } from "./profile.types";
 import BookmarkList from "./components/BookmarkList";
 import MyReviews from "./components/MyReviews";
+import { ErrorModal } from "../../components/ErrorModal";
 
 const LogoutButton = () => {
   const { handleLogout } = useLogout();
   const router = useRouter();
-
-  const handlePress = () => {
-    if (confirm("정말 로그아웃 하시겠습니까?")) {
-      handleLogout();
-    }
-  };
-
+  const [modalVisible, setModalVisible] = useState(false);
+  
   return (
-    <TouchableOpacity onPress={handlePress} style={profileStyles.logoutButton}>
-      <Text style={profileStyles.logoutButtonText}>로그아웃</Text>
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity
+        onPress={() => setModalVisible(true)}
+        style={profileStyles.logoutButton}
+      >
+        <Text style={profileStyles.logoutButtonText}>로그아웃</Text>
+      </TouchableOpacity>
+      <ErrorModal
+        visible={modalVisible}
+        type="confirm"
+        title="로그아웃"
+        message="로그아웃 하시겠습니까?"
+        confirmText="로그아웃"
+        cancelText="취소"
+        onRetry={() => {
+          setModalVisible(false);
+          handleLogout();
+        }}
+        onClose={() => setModalVisible(false)}
+      />
+    </>
   );
 };
 
 const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
   const {
     userData,
-    passwordUpdateMessage,
     passwordUpdateLoading,
-    updateMessage,
     password,
     setPassword,
     passwordConfirm,
@@ -88,9 +100,6 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
           onChangeText={setPasswordConfirm}
           secureTextEntry
         />
-        {passwordUpdateMessage ? (
-          <Text style={profileStyles.errorText}>{passwordUpdateMessage}</Text>
-        ) : null}
         <Button
           title="비밀번호 변경"
           onPress={handlePasswordUpdate}
@@ -117,9 +126,6 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
       </View>
 
       <View style={profileStyles.section}>
-        {updateMessage ? (
-          <Text style={profileStyles.errorText}>{updateMessage}</Text>
-        ) : null}
         <Button
           title="피부 설문 수정"
           onPress={handleUpdate}
@@ -217,6 +223,14 @@ export default function ProfileScreen() {
           {activeTab === "reviews" && <MyReviews />}
         </View>
       )}
+      <ErrorModal
+        visible={profileData.isModalVisible}
+        type={profileData.modalType}
+        title="알림"
+        message={profileData.modalMessage}
+        onRetry={profileData.onModalConfirm}
+        onClose={() => profileData.setIsModalVisible(false)}
+      />
     </>
   );
 }

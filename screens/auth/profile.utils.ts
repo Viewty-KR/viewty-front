@@ -16,8 +16,6 @@ export const useProfile = (): ProfileHookResult => {
 
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [updateMessage, setUpdateMessage] = useState("");
-  const [passwordUpdateMessage, setPasswordUpdateMessage] = useState("");
   const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
 
   const [selectedConcerns, setSelectedConcerns] = useState<string[]>([]);
@@ -32,6 +30,26 @@ export const useProfile = (): ProfileHookResult => {
     string | null
   >(null);
   const [selectedPoreSize, setSelectedPoreSize] = useState<string | null>(null);
+
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalType, setModalType] = useState<"error" | "confirm" | "alert">(
+    "alert",
+  );
+  const [onConfirmAction, setOnConfirmAction] = useState<(() => void) | null>(
+    null,
+  );
+
+  const showModal = (
+    message: string,
+    type: "error" | "confirm" | "alert" = "alert",
+    onConfirm?: () => void,
+  ) => {
+    setModalMessage(message);
+    setModalType(type);
+    setOnConfirmAction(() => onConfirm || null);
+    setIsModalVisible(true);
+  };
 
   const fetchUserData = useCallback(async () => {
     try {
@@ -96,26 +114,12 @@ export const useProfile = (): ProfileHookResult => {
     );
   }, []);
 
-  const handlePasswordUpdate = useCallback(async () => {
-    setPasswordUpdateMessage("");
-    if (!password) {
-      setPasswordUpdateMessage("새 비밀번호를 입력해주세요.");
-      return;
-    }
-    if (!passwordConfirm) {
-      setPasswordUpdateMessage("비밀번호 확인을 입력해주세요.");
-      return;
-    }
-    if (password !== passwordConfirm) {
-      setPasswordUpdateMessage("비밀번호가 일치하지 않습니다.");
-      return;
-    }
-
+  const performPasswordUpdate = useCallback(async () => {
     setPasswordUpdateLoading(true);
     try {
       const token = await getToken();
       if (!token) {
-        setPasswordUpdateMessage("로그인이 필요합니다.");
+        showModal("로그인이 필요합니다.");
         return;
       }
 
@@ -124,60 +128,44 @@ export const useProfile = (): ProfileHookResult => {
       });
 
       if (responseData.success) {
-        alert("비밀번호가 성공적으로 변경되었습니다.");
+        showModal("비밀번호가 성공적으로 변경되었습니다.");
         setPassword("");
         setPasswordConfirm("");
       } else {
-        setPasswordUpdateMessage(
-          responseData.message || "비밀번호 변경에 실패했습니다.",
-        );
+        showModal(responseData.message || "비밀번호 변경에 실패했습니다.");
       }
     } catch (err) {
       console.error("Error updating password:", err);
-      setPasswordUpdateMessage("비밀번호 변경 중 오류가 발생했습니다.");
+      showModal("비밀번호 변경 중 오류가 발생했습니다.");
     } finally {
       setPasswordUpdateLoading(false);
     }
-  }, [password, passwordConfirm]);
+  }, [password]);
 
-  const handleUpdate = useCallback(async () => {
-    if (!userData) {
-      setUpdateMessage(
-        "사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
-      );
+  const handlePasswordUpdate = useCallback(async () => {
+    if (!password) {
+      showModal("새 비밀번호를 입력해주세요.");
       return;
     }
-    setUpdateMessage("");
-
-    if (selectedConcerns.length === 0) {
-      alert("1번 질문을 완료해주세요.");
+    if (!passwordConfirm) {
+      showModal("비밀번호 확인을 입력해주세요.");
       return;
     }
-    if (!selectedSensitivity) {
-      alert("2번 질문을 완료해주세요.");
-      return;
-    }
-    if (!selectedSkinType) {
-      alert("3번 질문을 완료해주세요.");
+    if (password !== passwordConfirm) {
+      showModal("비밀번호가 일치하지 않습니다.");
       return;
     }
 
-    if (selectedSkinType === "D") {
-      if (
-        !selectedFeelingAfterWash ||
-        !selectedAfternoonSkin ||
-        !selectedPoreSize
-      ) {
-        alert("3-1, 3-2, 3-3번 질문을 모두 완료해주세요.");
-        return;
-      }
-    }
+    showModal("비밀번호를 변경하시겠습니까?", "confirm", performPasswordUpdate);
+  }, [password, passwordConfirm, performPasswordUpdate]);
 
+  const performUpdate = useCallback(async () => {
+    if (!userData) return;
     setLoading(true);
     try {
       const token = await getToken();
       if (!token) {
-        setUpdateMessage("로그인이 필요합니다.");
+        showModal("로그인이 필요합니다.");
         return;
       }
 
@@ -197,14 +185,14 @@ export const useProfile = (): ProfileHookResult => {
         await AuthApi.createSurvey(updateData);
 
       if (responseData.success) {
-        alert("정보가 성공적으로 수정되었습니다.");
+        showModal("피부 설문이 수정되었습니다.");
         fetchUserData();
       } else {
-        setUpdateMessage(responseData.message || "정보 수정에 실패했습니다.");
+        showModal(responseData.message || "피부 설문 수정에 실패했습니다.");
       }
     } catch (err) {
       console.error("Error updating profile:", err);
-      setUpdateMessage("업데이트 중 오류가 발생했습니다.");
+      showModal("업데이트 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
@@ -219,13 +207,61 @@ export const useProfile = (): ProfileHookResult => {
     fetchUserData,
   ]);
 
+  const handleUpdate = useCallback(async () => {
+    if (!userData) {
+      showModal("사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    if (selectedConcerns.length === 0) {
+      showModal("1번 질문을 완료해주세요.");
+      return;
+    }
+    if (!selectedSensitivity) {
+      showModal("2번 질문을 완료해주세요.");
+      return;
+    }
+    if (!selectedSkinType) {
+      showModal("3번 질문을 완료해주세요.");
+      return;
+    }
+
+    if (selectedSkinType === "D") {
+      if (
+        !selectedFeelingAfterWash ||
+        !selectedAfternoonSkin ||
+        !selectedPoreSize
+      ) {
+        showModal("3-1, 3-2, 3-3번 질문을 모두 완료해주세요.");
+        return;
+      }
+    }
+
+    showModal("피부 설문을 수정하시겠습니까?", "confirm", performUpdate);
+  }, [
+    userData,
+    selectedConcerns,
+    selectedSensitivity,
+    selectedSkinType,
+    selectedFeelingAfterWash,
+    selectedAfternoonSkin,
+    selectedPoreSize,
+    performUpdate,
+  ]);
+
+  const onModalConfirm = () => {
+    setIsModalVisible(false);
+    if (onConfirmAction) {
+      onConfirmAction();
+      setOnConfirmAction(null);
+    }
+  };
+
   return {
     loading,
     userData,
     error,
-    passwordUpdateMessage,
     passwordUpdateLoading,
-    updateMessage,
     password,
     setPassword,
     passwordConfirm,
@@ -245,13 +281,18 @@ export const useProfile = (): ProfileHookResult => {
     handlePasswordUpdate,
     handleUpdate,
     fetchUserData,
+    isModalVisible,
+    setIsModalVisible,
+    modalMessage,
+    setModalMessage,
+    modalType,
+    onModalConfirm,
   };
 };
 
 export const useLogout = () => {
   const handleLogout = useCallback(async () => {
     await removeToken();
-    alert("로그아웃 되었습니다.");
   }, []);
 
   return { handleLogout };

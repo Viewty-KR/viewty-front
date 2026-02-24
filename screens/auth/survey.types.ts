@@ -23,4 +23,9 @@ export interface SurveyHookResult {
   setSelectedPoreSize: (poreSize: string | null) => void;
   handleCancel: () => void;
   handleSave: () => Promise<void>;
+  isModalVisible: boolean;
+  setIsModalVisible: (visible: boolean) => void;
+  modalMessage: string;
+  setModalMessage: (message: string) => void;
+  onModalConfirm: () => void;
 }

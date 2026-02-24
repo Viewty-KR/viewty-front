@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useSurvey } from "./survey.utils";
 import { surveyStyles } from "./survey.style";
 import SurveyQuestions from "./components/SurveyQuestions";
+import { ErrorModal } from "../../components/ErrorModal";
 
 export default function SurveyScreen() {
   const {
@@ -21,6 +22,9 @@ export default function SurveyScreen() {
     setSelectedPoreSize,
     handleCancel,
     handleSave,
+    isModalVisible,
+    modalMessage,
+    onModalConfirm,
   } = useSurvey();
 
   return (
@@ -56,6 +60,14 @@ export default function SurveyScreen() {
           <Text style={surveyStyles.buttonText}>저장</Text>
         </TouchableOpacity>
       </View>
+
+      <ErrorModal
+        visible={isModalVisible}
+        type="alert"
+        title="알림"
+        message={modalMessage}
+        onRetry={onModalConfirm}
+      />
     </ScrollView>
   );
 }

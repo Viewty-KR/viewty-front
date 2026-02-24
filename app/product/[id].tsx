@@ -24,6 +24,8 @@ import {
 } from "./ingredientUtils";
 import { getToken } from "../../hooks/useToken";
 import { jwtDecode } from "jwt-decode";
+import { ErrorModal } from "../../components/ErrorModal";
+
 // 안드로이드 애니메이션 활성화
 if (
   Platform.OS === "android" &&
@@ -266,6 +268,35 @@ export default function ProductDetailScreen() {
     null,
   );
 
+  const [modalConfig, setModalConfig] = useState<{
+    visible: boolean;
+    title?: string;
+    message: string;
+    type: "confirm" | "alert" | "error";
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    message: "",
+    type: "alert",
+    onConfirm: () => {},
+  });
+
+  const showAppModal = (
+    message: string,
+    type: "confirm" | "alert" | "error" = "alert",
+    onConfirm: () => void = () =>
+      setModalConfig((prev) => ({ ...prev, visible: false })),
+    title?: string,
+  ) => {
+    setModalConfig({
+      visible: true,
+      message,
+      type,
+      onConfirm,
+      title,
+    });
+  };
+
   const DEFAULT_USER_NAME = "익명";
 
   useEffect(() => {
@@ -349,7 +380,7 @@ export default function ProductDetailScreen() {
       }
     } catch (error) {
       console.error("로딩 실패:", error);
-      Alert.alert("오류", "데이터를 불러오는 중 문제가 발생했습니다.");
+      showAppModal("데이터를 불러오는 중 문제가 발생했습니다.", "error");
     } finally {
       setLoading(false);
     }
@@ -366,14 +397,14 @@ export default function ProductDetailScreen() {
 
   const toggleBookmark = async () => {
     if (!productId || !currentUserId) {
-      Alert.alert("알림", "로그인이 필요한 서비스입니다.");
+      showAppModal("로그인이 필요한 서비스입니다.");
       return;
     }
     try {
       const res = await BookmarkApi.toggle(currentUserId as any, productId);
       if (res.success) setIsBookmarked(!isBookmarked);
     } catch (error) {
-      Alert.alert("오류", "북마크 변경 실패");
+      showAppModal("북마크 변경 실패", "error");
     }
   };
 
@@ -384,25 +415,36 @@ export default function ProductDetailScreen() {
     setModalVisible(true);
   };
 
-  const handleDeleteReview = async (reviewId: number) => {
-    if (confirm("정말 이 리뷰를 삭제하시겠습니까?")) {
-      try {
-        const res = await ReviewApi.delete(reviewId);
-        if (res.success) {
-          alert("리뷰가 삭제되었습니다.");
-          if (productId) fetchData(productId);
+  const handleDeleteReview = (reviewId: number) => {
+    showAppModal(
+      "리뷰를 삭제하시겠습니까?",
+      "confirm",
+      async () => {
+        setModalConfig((prev) => ({ ...prev, visible: false }));
+        try {
+          const res = await ReviewApi.delete(reviewId);
+          if (res.success) {
+            showAppModal("리뷰가 삭제되었습니다.");
+            if (productId) fetchData(productId);
+          }
+        } catch (error) {
+          console.error("리뷰 삭제 에러:", error);
+          showAppModal("리뷰 삭제가 실패했습니다.");
         }
-      } catch (error) {
-        console.error("삭제 에러:", error);
-        alert("리뷰 삭제 실패");
-      }
-    }
+      },
+      "삭제 확인",
+    );
   };
 
   const submitReview = async () => {
     if (!productId) return;
-    if (!reviewContent.trim())
-      return Alert.alert("알림", "내용을 입력해주세요.");
+    const trimmedContent = reviewContent.trim();
+    if (!trimmedContent) {
+      return showAppModal("리뷰 내용을 입력해주세요.");
+    }
+    if (trimmedContent.length < 3) {
+      return showAppModal("리뷰 내용을 3글자 이상 입력해주세요.");
+    }
     try {
       let res;
       if (editingReviewId) {
@@ -419,9 +461,10 @@ export default function ProductDetailScreen() {
       }
 
       if (res.success) {
-        Alert.alert(
-          "성공",
-          editingReviewId ? "리뷰 수정 완료" : "리뷰 등록 완료",
+        showAppModal(
+          editingReviewId
+            ? "리뷰 수정 완료됐습니다."
+            : "리뷰 등록 완료됐습니다.",
         );
         setModalVisible(false);
         setEditingReviewId(null);
@@ -430,9 +473,9 @@ export default function ProductDetailScreen() {
         fetchData(productId); // 리뷰 목록 새로고침
       }
     } catch (error) {
-      Alert.alert(
-        "오류",
-        editingReviewId ? "리뷰 수정 실패" : "리뷰 등록 실패",
+      showAppModal(
+        editingReviewId ? "리뷰 수정 실패했습니다." : "리뷰 등록 실패했습니다.",
+        "error",
       );
     }
   };
@@ -523,21 +566,26 @@ export default function ProductDetailScreen() {
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.bookmarkButton}
-            onPress={toggleBookmark}
-          >
-            <Ionicons
-              name={isBookmarked ? "heart" : "heart-outline"}
-              size={28}
-              color={isBookmarked ? "#FF2D78" : "#888"}
-            />
-            <Text
-              style={{ color: isBookmarked ? "#FF2D78" : "#888", marginTop: 4 }}
+          {currentUserId && (
+            <TouchableOpacity
+              style={styles.bookmarkButton}
+              onPress={toggleBookmark}
             >
-              {isBookmarked ? "찜 취소" : "찜하기"}
-            </Text>
-          </TouchableOpacity>
+              <Ionicons
+                name={isBookmarked ? "heart" : "heart-outline"}
+                size={28}
+                color={isBookmarked ? "#FF2D78" : "#888"}
+              />
+              <Text
+                style={{
+                  color: isBookmarked ? "#FF2D78" : "#888",
+                  marginTop: 4,
+                }}
+              >
+                {isBookmarked ? "찜 취소" : "찜하기"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.divider} />
@@ -701,16 +749,18 @@ export default function ProductDetailScreen() {
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <Text style={styles.sectionTitle}>리뷰 ({reviews.length})</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setEditingReviewId(null);
-                setReviewContent("");
-                setRating(5);
-                setModalVisible(true);
-              }}
-            >
-              <Text style={styles.writeReviewText}>리뷰 쓰기</Text>
-            </TouchableOpacity>
+            {currentUserId && (
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingReviewId(null);
+                  setReviewContent("");
+                  setRating(5);
+                  setModalVisible(true);
+                }}
+              >
+                <Text style={styles.writeReviewText}>리뷰 쓰기</Text>
+              </TouchableOpacity>
+            )}
           </View>
           {reviews.map((review) => (
             <View key={review.id} style={styles.reviewItem}>
@@ -808,7 +858,17 @@ export default function ProductDetailScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+
+                  <ErrorModal
+                    visible={modalConfig.visible}
+                    title={modalConfig.title}
+                    message={modalConfig.message}
+                    type={modalConfig.type}
+                    onRetry={modalConfig.onConfirm}
+                    onClose={() =>
+                      setModalConfig((prev) => ({ ...prev, visible: false }))
+                    }
+                  />    </SafeAreaView>
   );
 }
 

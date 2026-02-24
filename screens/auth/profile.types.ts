@@ -20,9 +20,7 @@ export interface ProfileHookResult {
   loading: boolean;
   userData: UserData | null;
   error: string | null;
-  passwordUpdateMessage: string;
   passwordUpdateLoading: boolean;
-  updateMessage: string;
   password: string;
   setPassword: (password: string) => void;
   passwordConfirm: string;
@@ -42,4 +40,10 @@ export interface ProfileHookResult {
   handlePasswordUpdate: () => Promise<void>;
   handleUpdate: () => Promise<void>;
   fetchUserData: () => Promise<void>;
+  isModalVisible: boolean;
+  setIsModalVisible: (visible: boolean) => void;
+  modalMessage: string;
+  setModalMessage: (message: string) => void;
+  modalType: "error" | "confirm" | "alert";
+  onModalConfirm: () => void;
 }
