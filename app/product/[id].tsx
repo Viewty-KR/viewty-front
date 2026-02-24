@@ -474,7 +474,7 @@ export default function ProductDetailScreen() {
       }
     } catch (error) {
       showAppModal(
-        editingReviewId ? "리뷰 수정 실패했습니다." : "리뷰 등록 실패했습니다.",
+        editingReviewId ? "리뷰 수정에 실패했습니다." : "리뷰 등록에 실패했습니다.",
         "error",
       );
     }
