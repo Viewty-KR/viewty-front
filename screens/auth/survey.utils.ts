@@ -19,12 +19,25 @@ export const useSurvey = (): SurveyHookResult => {
   >(null);
   const [selectedPoreSize, setSelectedPoreSize] = useState<string | null>(null);
 
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [onConfirmAction, setOnConfirmAction] = useState<(() => void) | null>(
+    null,
+  );
+
+  const showModal = useCallback((message: string, action?: () => void) => {
+    setModalMessage(message);
+    setOnConfirmAction(() => action || null);
+    setIsModalVisible(true);
+  }, []);
+
   useEffect(() => {
     if (!userId) {
-      alert("사용자 정보가 없습니다. 로그인 페이지로 이동합니다.");
-      router.replace("/auth/login");
+      showModal("사용자 정보가 없습니다. 로그인 페이지로 이동합니다.", () =>
+        router.replace("/auth/login"),
+      );
     }
-  }, [userId, router]);
+  }, [userId, router, showModal]);
 
   const toggleConcern = useCallback((concern: string) => {
     setSelectedConcerns((prev) =>
@@ -45,15 +58,15 @@ export const useSurvey = (): SurveyHookResult => {
 
   const handleSave = useCallback(async () => {
     if (selectedConcerns.length === 0) {
-      alert("1번 질문을 완료해주세요.");
+      showModal("1번 질문을 완료해주세요.");
       return;
     }
     if (!selectedSensitivity) {
-      alert("2번 질문을 완료해주세요.");
+      showModal("2번 질문을 완료해주세요.");
       return;
     }
     if (!selectedSkinType) {
-      alert("3번 질문을 완료해주세요.");
+      showModal("3번 질문을 완료해주세요.");
       return;
     }
 
@@ -63,14 +76,15 @@ export const useSurvey = (): SurveyHookResult => {
         !selectedAfternoonSkin ||
         !selectedPoreSize
       ) {
-        alert("3-1, 3-2, 3-3번 질문을 모두 완료해주세요.");
+        showModal("3-1, 3-2, 3-3번 질문을 모두 완료해주세요.");
         return;
       }
     }
 
     if (!userId) {
-      alert("사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.");
-      router.replace("/auth/login");
+      showModal("사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.", () =>
+        router.replace("/auth/login"),
+      );
       return;
     }
 
@@ -90,14 +104,15 @@ export const useSurvey = (): SurveyHookResult => {
       const responseData = await AuthApi.createSurvey(surveyData);
 
       if (responseData.success) {
-        alert("회원가입이 완료되었습니다.");
-        router.replace("/auth/login");
+        showModal("회원가입이 완료되었습니다.", () =>
+          router.replace("/auth/login"),
+        );
       } else {
-        alert(responseData.message || "설문 저장에 실패했습니다.");
+        showModal(responseData.message || "설문 저장에 실패했습니다.");
       }
     } catch (error) {
       console.error(error);
-      alert("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+      showModal("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
     }
   }, [
     userId,
@@ -108,7 +123,16 @@ export const useSurvey = (): SurveyHookResult => {
     selectedFeelingAfterWash,
     selectedAfternoonSkin,
     selectedPoreSize,
+    showModal,
   ]);
+
+  const onModalConfirm = () => {
+    setIsModalVisible(false);
+    if (onConfirmAction) {
+      onConfirmAction();
+      setOnConfirmAction(null);
+    }
+  };
 
   return {
     selectedConcerns,
@@ -125,5 +149,8 @@ export const useSurvey = (): SurveyHookResult => {
     setSelectedPoreSize,
     handleCancel,
     handleSave,
+    isModalVisible,
+    modalMessage,
+    onModalConfirm,
   };
 };

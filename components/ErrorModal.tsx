@@ -11,49 +11,93 @@ import {
   SPACING,
 } from "../constants/theme";
 
+export type ModalType = "error" | "confirm" | "alert";
+
 interface ErrorModalProps {
   visible: boolean;
+  type?: ModalType;
+  title?: string;
   message: string | null;
-  onClose: () => void;
-  onRetry: () => void;
+  onRetry?: () => void;  // 확인, 다시 시도 버튼
+  onClose?: () => void;   // 취소, 닫기 버튼
+  confirmText?: string;
+  cancelText?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
 }
 
 export const ErrorModal = ({
   visible,
+  type = "error",
+  title,
   message,
-  onClose,
   onRetry,
+  onClose,
+  confirmText,
+  cancelText,
+  icon,
 }: ErrorModalProps) => {
+  // 모달 타입별 기본 설정
+  const config = {
+    error: {
+      defaultTitle: "오류가 발생했습니다",
+      defaultIcon: "alert-circle" as const,
+      defaultConfirmText: "다시 시도",
+      defaultCancelText: "닫기",
+      showCancel: true,
+    },
+    confirm: {
+      defaultTitle: "확인",
+      defaultIcon: "help-circle" as const,
+      defaultConfirmText: "확인",
+      defaultCancelText: "취소",
+      showCancel: true,
+    },
+    alert: {
+      defaultTitle: "알림",
+      defaultIcon: "notifications" as const,
+      defaultConfirmText: "확인",
+      defaultCancelText: "",
+      showCancel: false,
+    },
+  }[type];
+
+  const finalTitle = title || config.defaultTitle;
+  const finalIcon = icon || config.defaultIcon;
+  const finalConfirmText = confirmText || config.defaultConfirmText;
+  const finalCancelText = cancelText || config.defaultCancelText;
+
   return (
     <Modal
       animationType="fade"
       transparent={true}
       visible={visible}
-      onRequestClose={onClose}
+      onRequestClose={onClose || onRetry || (() => {})}
     >
       <View style={styles.overlay}>
         <View style={styles.content}>
           <View style={styles.iconContainer}>
             <Ionicons
-              name="alert-circle"
+              name={finalIcon}
               size={ICON_SIZE.modalIcon}
               color={COLORS.primary}
             />
           </View>
-          <Text style={styles.title}>오류가 발생했습니다</Text>
+          <Text style={styles.title}>{finalTitle}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.buttonSecondary]}
-              onPress={onClose}
-            >
-              <Text style={styles.buttonTextSecondary}>닫기</Text>
-            </TouchableOpacity>
+            {config.showCancel && onClose && (
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary]}
+                onPress={onClose}
+              >
+                <Text style={styles.buttonTextSecondary}>{finalCancelText}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.button, styles.buttonPrimary]}
-              onPress={onRetry}
+              onPress={onRetry ? onRetry : () => {}}
             >
-              <Text style={styles.buttonTextPrimary}>다시 시도</Text>
+              <Text style={styles.buttonTextPrimary}>{finalConfirmText}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -73,9 +117,11 @@ const styles = StyleSheet.create({
   content: {
     backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xxxl,
+    paddingHorizontal: SPACING.xxxl,
+    paddingTop: SPACING.xxxl,
+    paddingBottom: SPACING.xxl,
     width: "100%",
-    maxWidth: 400,
+    maxWidth: 340,
     alignItems: "center",
     ...modalShadowStyle,
   },

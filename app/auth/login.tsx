@@ -11,7 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { AuthApi } from "../../libs/api";
 import { getToken, removeToken, setToken } from "../../hooks/useToken";
-
+import { ErrorModal } from "../../components/ErrorModal";
 export default function LoginScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -21,6 +21,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -47,13 +48,14 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    setErrorMessage("");
     if (!formData.id) {
       setErrorMessage("아이디를 입력해주세요.");
+      setModalVisible(true);
       return;
     }
     if (!formData.password) {
       setErrorMessage("비밀번호를 입력해주세요.");
+      setModalVisible(true);
       return;
     }
 
@@ -74,12 +76,15 @@ export default function LoginScreen() {
         const messageToShow =
           responseData.message || "아이디 또는 비밀번호가 잘못되었습니다.";
         setErrorMessage(messageToShow);
+        setModalVisible(true);
         setIsLoggedIn(false);
       }
     } catch (error: any) {
       console.error(error);
-      const messageToShow = error.message || "네트워크 오류가 발생했습니다. 다시 시도해주세요.";
+      const messageToShow =
+        error.message || "네트워크 오류가 발생했습니다. 다시 시도해주세요.";
       setErrorMessage(messageToShow);
+      setModalVisible(true);
       setIsLoggedIn(false);
     } finally {
       setLoading(false);
@@ -89,11 +94,13 @@ export default function LoginScreen() {
   const handleLogout = async () => {
     try {
       await removeToken();
-      alert("로그아웃되었습니다.");
+      setErrorMessage("로그아웃되었습니다.");
+      setModalVisible(true);
       setIsLoggedIn(false);
     } catch (error) {
       console.error("SecureStore에서 토큰을 제거하는 중 오류 발생:", error);
-      alert("로그아웃 중 오류가 발생했습니다.");
+      setErrorMessage("로그아웃 중 오류가 발생했습니다.");
+      setModalVisible(true);
     }
   };
 
@@ -124,9 +131,6 @@ export default function LoginScreen() {
             onChangeText={(value) => handleChange("password", value)}
             secureTextEntry
           />
-          {errorMessage ? (
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          ) : null}
           {loading ? (
             <ActivityIndicator size="large" color="#0000ff" />
           ) : (
@@ -140,6 +144,14 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </>
       )}
+      <ErrorModal
+        visible={modalVisible}
+        type="alert"
+        icon="alert-circle"
+        title="알림"
+        message={errorMessage}
+        onRetry={() => setModalVisible(false)}
+      />
     </View>
   );
 }
