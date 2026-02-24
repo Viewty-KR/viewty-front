@@ -463,8 +463,8 @@ export default function ProductDetailScreen() {
       if (res.success) {
         showAppModal(
           editingReviewId
-            ? "리뷰 수정 완료됐습니다."
-            : "리뷰 등록 완료됐습니다.",
+            ? "리뷰가 수정되었습니다."
+            : "리뷰가 등록되었습니다.",
         );
         setModalVisible(false);
         setEditingReviewId(null);
