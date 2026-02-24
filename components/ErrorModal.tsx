@@ -71,7 +71,7 @@ export const ErrorModal = ({
       animationType="fade"
       transparent={true}
       visible={visible}
-      onRequestClose={onClose || onRetry}
+      onRequestClose={onClose || onRetry || (() => {})}
     >
       <View style={styles.overlay}>
         <View style={styles.content}>
