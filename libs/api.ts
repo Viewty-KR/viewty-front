@@ -6,10 +6,10 @@ import { getToken, removeToken } from "../hooks/useToken";
 const resolveBaseUrl = () => {
   const expoExtra =
     (Constants.expoConfig?.extra as
-      | { apiBaseUrl?: string; androidApiBaseUrl?: string }
+      | { apiBaseUrl?: string, androidApiBaseUrl?: string }
       | undefined) ??
     (Constants.manifest2?.extra as
-      | { apiBaseUrl?: string; androidApiBaseUrl?: string }
+      | { apiBaseUrl?: string, androidApiBaseUrl?: string }
       | undefined);
 
   let configuredUrl = null;
