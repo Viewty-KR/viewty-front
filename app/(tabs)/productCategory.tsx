@@ -21,6 +21,7 @@ interface ProductListItem {
   price?: number;
   manufacturer?: string;
   imgUrl?: string;
+  arAvailable?: boolean;
 }
 
 export default function ProductCategoryScreen() {
@@ -67,11 +68,25 @@ export default function ProductCategoryScreen() {
       style={styles.card}
       onPress={() => router.push(`/product/${item.id}`)}
     >
-      <Image
-        source={{ uri: getSafeImageUrl(item.imgUrl) }}
-        style={styles.productImage}
-        resizeMode="contain"
-      />
+      <View style={styles.imageContainer}>
+        <Image 
+          source={{ uri: getSafeImageUrl(item.imgUrl) }} 
+          style={styles.productImage} 
+          resizeMode="contain"
+        />
+        {item.arAvailable && (
+          <TouchableOpacity 
+            style={styles.arBadge}
+            onPress={(e) => {
+              e.stopPropagation();
+              router.push(`/ar/${item.id}`);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.arBadgeText}>AR체험</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       <View style={styles.cardContent}>
         <Text style={styles.manufacturer}>{item.manufacturer}</Text>
         <Text style={styles.name} numberOfLines={2}>
@@ -280,12 +295,30 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: "#fff",
   },
+  imageContainer: {
+    position: "relative",
+    width: "100%",
+  },
   productImage: {
     width: "100%",
     aspectRatio: 1,
     borderRadius: 8,
     backgroundColor: "#f9f9f9",
     marginBottom: 8,
+  },
+  arBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    backgroundColor: "#FF2D78",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  arBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "bold",
   },
   cardContent: {
     paddingHorizontal: 4,
