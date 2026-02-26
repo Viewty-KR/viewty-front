@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ErrorModal } from "../../components/ErrorModal";
 import {
   CuratedLooksSkeleton,
+  RecommendedSkeleton,
   TrendingSkeleton,
 } from "../../components/Skeletons";
 import { COLORS, ICON_SIZE } from "../../constants/theme";
@@ -28,11 +29,16 @@ export default function HomeScreen() {
 
   const {
     trendingItems,
+    recommendedItems,
     curatedLooks,
     errorMessage,
+    recommendSkinType,
+    recommendLoading,
+    setRecommendSkinType,
     handleRetry,
     handleCloseError,
     loadProducts,
+    loadRecommendations,
     loadCategories,
   } = useProducts();
 
@@ -41,7 +47,8 @@ export default function HomeScreen() {
     React.useCallback(() => {
       loadCategories();
       loadProducts();
-    }, [loadCategories, loadProducts])
+      loadRecommendations(recommendSkinType);
+    }, [loadCategories, loadProducts, loadRecommendations]),
   );
 
   const handleOpenProduct = (productId: number | string) => {
@@ -97,7 +104,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="인기 상품 전체 보기"
           >
-            <Text style={styles.seeAll}>View All</Text>
+            {/* <Text style={styles.seeAll}>View All</Text> */}
           </TouchableOpacity>
         </View>
 
@@ -139,6 +146,98 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
+        {/* Recommended for You */}
+        <View
+          style={[styles.sectionHeader, { marginTop: 24, marginBottom: 8 }]}
+        >
+          <Text style={styles.sectionTitle}>Recommended for You</Text>
+        </View>
+
+        {/* Skin Type Tabs */}
+        {/* <View
+          style={[
+            styles.tabContainer,
+            { justifyContent: "flex-start", gap: 12, marginBottom: 16 },
+          ]}
+        >
+          {[
+            { id: "건성", label: "건성" },
+            { id: "복합성", label: "복합성" },
+            { id: "지성", label: "지성" },
+            { id: "민감", label: "민감성" },
+            { id: "여드름", label: "여드름" },
+            { id: "보습", label: "보습" },
+          ].map((tab) => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[
+                styles.tabItem,
+                recommendSkinType === tab.id && styles.activeTabItem,
+                { paddingHorizontal: 12 },
+              ]}
+              onPress={() => setRecommendSkinType(tab.id)}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  recommendSkinType === tab.id && styles.activeTabText,
+                  { fontSize: 14 },
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View> */}
+
+        <View style={{ minHeight: 280, marginBottom: 32 }}>
+          {recommendLoading ? (
+            <RecommendedSkeleton />
+          ) : recommendedItems.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={[styles.horizontalScroll, { marginBottom: 0 }]} // 중복 마진 제거
+              contentContainerStyle={{ paddingRight: 20 }}
+            >
+              {recommendedItems.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.lookCard, { width: 160, marginRight: 16 }]}
+                  activeOpacity={0.9}
+                  onPress={() => handleOpenProduct(item.id)}
+                >
+                  <View style={[styles.imageWrapper, { height: 160 }]}>
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.lookImage}
+                    />
+                  </View>
+                  <Text
+                    style={[styles.lookTitle, { fontSize: 14 }]}
+                    numberOfLines={1}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={[styles.lookDesc, { fontSize: 12 }]}
+                    numberOfLines={1}
+                  >
+                    {item.desc}
+                  </Text>
+                  <Text style={[styles.price, { fontSize: 14, marginTop: 4 }]}>
+                    {formatPrice(item.price)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={{ paddingLeft: 20, paddingVertical: 20 }}>
+              <Text style={{ color: COLORS.gray }}>추천 상품이 없습니다.</Text>
+            </View>
+          )}
+        </View>
+
         {/* Curated Looks */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Curated Looks</Text>
@@ -173,7 +272,7 @@ export default function HomeScreen() {
 
                 <View style={styles.priceRow}>
                   <Text style={styles.price}>{formatPrice(item.price)}</Text>
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     style={styles.addBtn}
                     accessibilityRole="button"
                     accessibilityLabel="장바구니에 추가"
@@ -184,7 +283,7 @@ export default function HomeScreen() {
                       size={ICON_SIZE.md}
                       color={COLORS.textSecondary}
                     />
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
               </View>
             ))}
@@ -192,7 +291,7 @@ export default function HomeScreen() {
         )}
 
         {/* Bundle Banner */}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.bundleBanner}
           accessibilityRole="button"
           accessibilityLabel="번들 할인 이벤트"
@@ -209,7 +308,7 @@ export default function HomeScreen() {
           <View style={styles.percentCircle}>
             <Text style={styles.percentText}>%</Text>
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </ScrollView>
     </SafeAreaView>
   );

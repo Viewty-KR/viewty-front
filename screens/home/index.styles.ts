@@ -1,12 +1,12 @@
 import { StyleSheet } from "react-native";
 import {
-    BORDER_RADIUS,
-    COLORS,
-    FONT_SIZE,
-    FONT_WEIGHT,
-    modalShadowStyle,
-    shadowStyle,
-    SPACING,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  modalShadowStyle,
+  shadowStyle,
+  SPACING,
 } from "../../constants/theme";
 
 // Theme 상수들 re-export (편의성을 위해)
@@ -160,7 +160,7 @@ const trendingStyles = StyleSheet.create({
   },
   horizontalScroll: {
     paddingLeft: SPACING.xl,
-    marginBottom: SPACING.xxxl,
+    height: 280,
   },
   trendCard: {
     width: 280,
