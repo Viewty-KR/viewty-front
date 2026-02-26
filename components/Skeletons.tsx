@@ -121,10 +121,33 @@ export const CuratedLooksSkeleton = ({
   );
 };
 
+export const RecommendedSkeleton = () => {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.horizontalScroll}
+    >
+      {[1, 2, 3].map((index) => (
+        <View key={index} style={[styles.lookCard, { width: 160, marginRight: 16 }]}>
+          <SkeletonBox
+            width={160}
+            height={160}
+            style={{ borderRadius: BORDER_RADIUS.lg, marginBottom: 10 }}
+          />
+          <SkeletonBox width={120} height={14} style={{ marginBottom: 6 }} />
+          <SkeletonBox width={80} height={12} style={{ marginBottom: 8 }} />
+          <SkeletonBox width={60} height={14} />
+        </View>
+      ))}
+    </ScrollView>
+  );
+};
+
 const styles = StyleSheet.create({
   horizontalScroll: {
     paddingLeft: SPACING.xl,
-    marginBottom: SPACING.xxxl,
+    height: 240, // 고정 높이
   },
   trendCard: {
     width: 280,

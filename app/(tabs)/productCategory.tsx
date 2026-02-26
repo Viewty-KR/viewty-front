@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { useProducts } from "../../hooks/useProducts";
-import { IMAGE_BASE_URL } from "../../libs/api";
+import { BASE_URL } from "../../libs/api";
 
 interface ProductListItem {
   id: number;
@@ -26,12 +26,12 @@ interface ProductListItem {
 
 export default function ProductCategoryScreen() {
   const router = useRouter();
-  const { 
-    products, 
+  const {
+    products,
     categories,
-    loading, 
-    errorMessage, 
-    selectedCategory, 
+    loading,
+    errorMessage,
+    selectedCategory,
     setCategory,
     currentPage,
     totalPages,
@@ -46,23 +46,21 @@ export default function ProductCategoryScreen() {
     React.useCallback(() => {
       loadCategories();
       loadProducts();
-    }, [loadCategories, loadProducts])
+    }, [loadCategories, loadProducts]),
   );
 
-  // "전체" 카테고리를 포함한 목록을 메모이제이션하여 렌더링 최적화 및 데이터 유실 방지
+  // "전체" 카테고리를 포함한 목록
   const allCategories = useMemo(() => {
-    const list = [{ id: null, name: "전체" }, ...categories];
-    console.log("렌더링할 카테고리 목록:", list.map(c => c.name));
-    return list;
+    return [{ id: null, name: "전체" }, ...categories];
   }, [categories]);
 
   const getSafeImageUrl = (url?: string) => {
     if (!url) return "https://via.placeholder.com/150?text=No+Image";
     return url.startsWith("http") || url.startsWith("/")
       ? url.startsWith("/")
-        ? `${IMAGE_BASE_URL}${url}`
+        ? `${BASE_URL}${url}`
         : url
-      : `${IMAGE_BASE_URL}/${url}`;
+      : `${BASE_URL}/${url}`;
   };
 
   const renderItem: ListRenderItem<ProductListItem> = ({ item }) => (
@@ -91,7 +89,9 @@ export default function ProductCategoryScreen() {
       </View>
       <View style={styles.cardContent}>
         <Text style={styles.manufacturer}>{item.manufacturer}</Text>
-        <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+        <Text style={styles.name} numberOfLines={2}>
+          {item.name}
+        </Text>
         <Text style={styles.price}>{item.price?.toLocaleString()}원</Text>
       </View>
     </TouchableOpacity>
@@ -100,12 +100,12 @@ export default function ProductCategoryScreen() {
   // 페이지네이션 번호 생성
   const renderPagination = () => {
     if (totalPages <= 1) return null;
-    
+
     let pages = [];
     const maxVisible = 5;
     let startPage = Math.max(0, currentPage - 2);
     let endPage = Math.min(totalPages - 1, startPage + maxVisible - 1);
-    
+
     if (endPage - startPage < maxVisible - 1) {
       startPage = Math.max(0, endPage - maxVisible + 1);
     }
@@ -114,37 +114,50 @@ export default function ProductCategoryScreen() {
       pages.push(
         <TouchableOpacity
           key={i}
-          style={[styles.pageButton, currentPage === i && styles.pageButtonActive]}
-          onPress={() => {
-            setPage(i);
-            // 리스트 상단으로 스크롤 이동 로직 추가 가능
-          }}
+          style={[
+            styles.pageButton,
+            currentPage === i && styles.pageButtonActive,
+          ]}
+          onPress={() => setPage(i)}
         >
-          <Text style={[styles.pageText, currentPage === i && styles.pageTextActive]}>
+          <Text
+            style={[
+              styles.pageText,
+              currentPage === i && styles.pageTextActive,
+            ]}
+          >
             {i + 1}
           </Text>
-        </TouchableOpacity>
+        </TouchableOpacity>,
       );
     }
 
     return (
       <View style={styles.paginationContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setPage(Math.max(0, currentPage - 1))}
           disabled={currentPage === 0}
           style={styles.arrowButton}
         >
-          <Ionicons name="chevron-back" size={20} color={currentPage === 0 ? "#ccc" : "#333"} />
+          <Ionicons
+            name="chevron-back"
+            size={20}
+            color={currentPage === 0 ? "#ccc" : "#333"}
+          />
         </TouchableOpacity>
-        
+
         {pages}
 
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setPage(Math.min(totalPages - 1, currentPage + 1))}
           disabled={currentPage === totalPages - 1}
           style={styles.arrowButton}
         >
-          <Ionicons name="chevron-forward" size={20} color={currentPage === totalPages - 1 ? "#ccc" : "#333"} />
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={currentPage === totalPages - 1 ? "#ccc" : "#333"}
+          />
         </TouchableOpacity>
       </View>
     );
@@ -153,56 +166,68 @@ export default function ProductCategoryScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: "카테고리" }} />
-      
-      {/* 카테고리 탭 바 (DB 데이터를 통한 동적 생성) */}
-      <View style={styles.categoryContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {allCategories.map((cat) => (
-            <TouchableOpacity
-              key={cat.id === null ? "all" : String(cat.id)}
-              style={[
-                styles.categoryTab,
-                selectedCategory === cat.id && styles.categoryTabActive,
-              ]}
-              onPress={() => setCategory(cat.id)}
-            >
-              <Text
-                style={[
-                  styles.categoryText,
-                  selectedCategory === cat.id && styles.categoryTextActive,
-                ]}
-              >
-                {cat.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
 
-      <View style={styles.totalCountContainer}>
-        <Text style={styles.totalCountText}>전체 {totalElements.toLocaleString()}개</Text>
-      </View>
-
-      {loading && products.length === 0 ? (
-        <View style={styles.center}>
-          <ActivityIndicator color="#FF2D78" />
+      <View style={styles.contentWrapper}>
+        {/* 1. 왼쪽 사이드바 영역 (화해 스타일) */}
+        <View style={styles.sidebar}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {allCategories.map((cat) => {
+              const isActive = selectedCategory === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id === null ? "all" : String(cat.id)}
+                  style={[
+                    styles.sidebarItem,
+                    isActive && styles.sidebarItemActive,
+                  ]}
+                  onPress={() => setCategory(cat.id)}
+                >
+                  <Text
+                    style={[
+                      styles.sidebarText,
+                      isActive && styles.sidebarTextActive,
+                    ]}
+                  >
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
-      ) : (
-        <FlatList
-          data={products}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderItem}
-          numColumns={2} 
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.listContent}
-          ListFooterComponent={renderPagination}
-          ListEmptyComponent={
+
+        {/* 2. 오른쪽 메인 상품 목록 영역 */}
+        <View style={styles.mainArea}>
+          <View style={styles.totalCountContainer}>
+            <Text style={styles.totalCountText}>
+              전체 {totalElements.toLocaleString()}개
+            </Text>
+          </View>
+
+          {loading && products.length === 0 ? (
             <View style={styles.center}>
-              <Text style={{ marginTop: 50, color: '#888' }}>해당 카테고리의 상품이 없습니다.</Text>
+              <ActivityIndicator color="#FF2D78" />
             </View>
-          }
-        />
-      )}
+          ) : (
+            <FlatList
+              data={products as unknown as ProductListItem[]}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={renderItem}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
+              contentContainerStyle={styles.listContent}
+              ListFooterComponent={renderPagination}
+              ListEmptyComponent={
+                <View style={styles.center}>
+                  <Text style={{ marginTop: 50, color: "#888" }}>
+                    해당 카테고리의 상품이 없습니다.
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </View>
+      </View>
     </View>
   );
 }
@@ -210,33 +235,43 @@ export default function ProductCategoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  categoryContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    backgroundColor: "#fff",
+
+  // 💡 [핵심] 가로로 화면 분할
+  contentWrapper: {
+    flex: 1,
+    flexDirection: "row",
   },
-  categoryScroll: {
-    paddingHorizontal: 10,
-    paddingVertical: 12,
+
+  // 💡 왼쪽 카테고리 사이드바
+  sidebar: {
+    width: 110, // 사이드바 고정 너비
+    backgroundColor: "#F7F7F7", // 기본적으로 살짝 회색 배경
+    borderRightWidth: 1,
+    borderRightColor: "#EEE",
   },
-  categoryTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#f5f5f5",
-    marginHorizontal: 4,
+  sidebarItem: {
+    paddingVertical: 18,
+    paddingHorizontal: 15,
   },
-  categoryTabActive: {
-    backgroundColor: "#FF2D78",
+  sidebarItemActive: {
+    backgroundColor: "#fff", // 선택된 것은 하얗게 뚫린 느낌
+    borderRightWidth: 1,
+    borderRightColor: "#fff", // 우측 선을 흰색으로 가려서 열린 느낌 주기
+    marginLeft: -1, // 테두리 겹침 방지
   },
-  categoryText: {
+  sidebarText: {
     fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
+    color: "#777", // 비활성 글씨
   },
-  categoryTextActive: {
-    color: "#fff",
+  sidebarTextActive: {
+    color: "#333", // 활성 글씨
     fontWeight: "bold",
+  },
+
+  // 💡 오른쪽 상품 영역
+  mainArea: {
+    flex: 1,
+    backgroundColor: "#fff",
   },
   totalCountContainer: {
     paddingHorizontal: 16,
@@ -256,7 +291,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    width: "48%", // 2열 표시를 위해 약 절반 너비 설정
+    width: "48%", // 2열 표시
     marginBottom: 20,
     backgroundColor: "#fff",
   },
@@ -289,7 +324,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   manufacturer: { fontSize: 11, color: "#aaa", marginBottom: 2 },
-  name: { fontSize: 14, color: "#333", height: 40, lineHeight: 20, marginBottom: 4 },
+  name: {
+    fontSize: 14,
+    color: "#333",
+    height: 40,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
   price: { fontSize: 15, fontWeight: "bold", color: "#333" },
 
   // 페이지네이션

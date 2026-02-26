@@ -1,23 +1,34 @@
 import { useCallback, useState } from "react";
 import { Product, ProductApi } from "../libs/api";
 import { LookItem, TrendingItem } from "../screens/home/index.types";
-import { extractProducts, mapToLook, mapToTrending } from "../screens/home/index.utils";
+import {
+  extractProducts,
+  mapToLook,
+  mapToTrending,
+} from "../screens/home/index.utils";
 
 interface UseProductsReturn {
   products: Product[];
   categories: any[];
   trendingItems: TrendingItem[];
+  recommendedItems: LookItem[];
   curatedLooks: LookItem[];
+  functionalProducts: Record<string, LookItem[]>;
   errorMessage: string | null;
   loading: boolean;
+  recommendLoading: boolean;
   selectedCategory: number | null;
+  recommendSkinType: string;
   currentPage: number;
   totalPages: number;
   totalElements: number;
   setCategory: (categoryId: number | null) => void;
+  setRecommendSkinType: (skinType: string) => Promise<void>;
   setPage: (page: number) => void;
   loadProducts: () => Promise<void>;
+  loadRecommendations: (skinType: string) => Promise<void>;
   loadCategories: () => Promise<void>;
+  loadFunctionalProducts: (type: string) => Promise<void>;
   handleRetry: () => void;
   handleCloseError: () => void;
 }
@@ -26,10 +37,14 @@ export const useProducts = (): UseProductsReturn => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
+  const [recommendedItems, setRecommendedItems] = useState<LookItem[]>([]);
   const [curatedLooks, setCuratedLooks] = useState<LookItem[]>([]);
+  const [functionalProducts, setFunctionalProducts] = useState<Record<string, LookItem[]>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recommendLoading, setRecommendLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [recommendSkinType, setRecommendSkinTypeState] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(0); // 0부터 시작 (백엔드 기준)
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -41,23 +56,38 @@ export const useProducts = (): UseProductsReturn => {
     try {
       console.log("카테고리 로딩 시작...");
       const response = await ProductApi.getCategories();
-      console.log("카테고리 응답 원본:", JSON.stringify(response));
-      
-      let categoryList = [];
-      
+
+      let categoryList: any[] = [];
+
       if (response && response.success && Array.isArray(response.data)) {
         categoryList = response.data;
       } else if (Array.isArray(response)) {
-        categoryList = response;
-      } else if (response && response.data && Array.isArray(response.data.content)) {
-        // 혹시 페이징 처리가 되어 있을 경우 대비
-        categoryList = response.data.content;
+        categoryList = response as any[];
+      } else if (response && response.data) {
+        const dataAsAny = response.data as any;
+        if (Array.isArray(dataAsAny.content)) {
+          categoryList = dataAsAny.content;
+        }
       }
 
-      console.log("가공된 카테고리 목록 (개수):", categoryList.length);
       setCategories(categoryList);
     } catch (error) {
       console.error("카테고리 로딩 에러 상세:", error);
+    }
+  }, []);
+
+  /**
+   * 추천 상품 로드 (독립적으로 실행 가능하도록 수정)
+   */
+  const loadRecommendations = useCallback(async (skinType: string) => {
+    try {
+      const response = await ProductApi.getRecommend(0, 20, skinType);
+      if (response?.success) {
+        const rawRecommend = extractProducts(response.data);
+        setRecommendedItems(rawRecommend.map(mapToLook));
+      }
+    } catch (error) {
+      console.error("추천 상품 로딩 실패:", error);
     }
   }, []);
 
@@ -66,7 +96,11 @@ export const useProducts = (): UseProductsReturn => {
       setLoading(true);
       setErrorMessage(null);
 
-      const response = await ProductApi.getList(currentPage, 20, selectedCategory);
+      const response = await ProductApi.getList(
+        currentPage,
+        20,
+        selectedCategory,
+      );
 
       // API 응답 실패 처리
       if (!response?.success) {
@@ -79,7 +113,11 @@ export const useProducts = (): UseProductsReturn => {
       setProducts(rawList);
 
       // 페이지네이션 정보 업데이트
-      if (response.data && typeof response.data === 'object' && 'totalPages' in response.data) {
+      if (
+        response.data &&
+        typeof response.data === "object" &&
+        "totalPages" in response.data
+      ) {
         setTotalPages(response.data.totalPages);
         setTotalElements(response.data.totalElements);
       }
@@ -111,6 +149,25 @@ export const useProducts = (): UseProductsReturn => {
     }
   }, [currentPage, selectedCategory]); // 의존성 배열에 currentPage와 selectedCategory 추가
 
+  /**
+   * 효능별 상품 로드
+   */
+  const loadFunctionalProducts = useCallback(async (type: string) => {
+    try {
+      const response = await ProductApi.getFunctionalList(type, 0, 10);
+      if (response?.success) {
+        const rawList = extractProducts(response.data);
+        const curated = rawList.map(mapToLook);
+        setFunctionalProducts(prev => ({
+          ...prev,
+          [type]: curated
+        }));
+      }
+    } catch (error) {
+      console.error(`효능별(${type}) 상품 로딩 실패:`, error);
+    }
+  }, []);
+
   // useEffect 제거 - 이제 각 화면에서 필요할 때만 명시적으로 호출
   // useEffect(() => {
   //   loadCategories();
@@ -123,6 +180,16 @@ export const useProducts = (): UseProductsReturn => {
   const setCategory = (id: number | null) => {
     setSelectedCategory(id);
     setCurrentPage(0); // 카테고리 변경 시 첫 페이지로 리셋
+  };
+
+  const setRecommendSkinType = async (skinType: string) => {
+    setRecommendSkinTypeState(skinType);
+    setRecommendLoading(true);
+    try {
+      await loadRecommendations(skinType);
+    } finally {
+      setRecommendLoading(false);
+    }
   };
 
   const setPage = (page: number) => {
@@ -142,18 +209,25 @@ export const useProducts = (): UseProductsReturn => {
     products,
     categories,
     trendingItems,
+    recommendedItems,
     curatedLooks,
+    functionalProducts,
     errorMessage,
     loading,
+    recommendLoading,
     selectedCategory,
     currentPage,
     totalPages,
     totalElements,
     setCategory,
+    setRecommendSkinType,
     setPage,
     loadProducts,
+    loadRecommendations,
     loadCategories,
+    loadFunctionalProducts,
     handleRetry,
     handleCloseError,
+    recommendSkinType,
   };
 };

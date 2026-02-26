@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ErrorModal } from "../../components/ErrorModal";
 import {
   CuratedLooksSkeleton,
+  RecommendedSkeleton,
   TrendingSkeleton,
 } from "../../components/Skeletons";
 import { COLORS, ICON_SIZE } from "../../constants/theme";
@@ -28,21 +29,48 @@ export default function HomeScreen() {
 
   const {
     trendingItems,
+    recommendedItems,
     curatedLooks,
+    functionalProducts,
     errorMessage,
+    recommendSkinType,
+    recommendLoading,
+    setRecommendSkinType,
     handleRetry,
     handleCloseError,
     loadProducts,
+    loadRecommendations,
     loadCategories,
+    loadFunctionalProducts,
   } = useProducts();
 
-  // 화면이 포커스될 때만 데이터 로드
+  const [selectedFunctionalType, setSelectedFunctionalType] =
+    React.useState("주름개선");
+
+  const FUNCTIONAL_TYPES = [
+    "주름개선",
+    "수렴진정",
+    "피부보호",
+    "피부보습",
+    "피부미백",
+  ];
+
+  // 1. 화면 진입 시 한 번만 전체 데이터를 로드합니다.
   useFocusEffect(
     React.useCallback(() => {
       loadCategories();
       loadProducts();
-    }, [loadCategories, loadProducts])
+      loadRecommendations(recommendSkinType);
+    }, [loadCategories, loadProducts, loadRecommendations, recommendSkinType]),
   );
+
+  // 2. 효능별 탭이 바뀔 때는 '효능별 상품'만 다시 로드합니다.
+  React.useEffect(() => {
+    FUNCTIONAL_TYPES.forEach((type) => {
+      // 5개 탭의 데이터를 백그라운드에서 조용히 다 받아옵니다.
+      loadFunctionalProducts(type);
+    });
+  }, [loadFunctionalProducts]);
 
   const handleOpenProduct = (productId: number | string) => {
     router.push({
@@ -90,6 +118,77 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContentContainer}
       >
+        {/* Functional Tabs Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>효능별 추천</Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 15, paddingLeft: 16 }}
+        >
+          {FUNCTIONAL_TYPES.map((type) => (
+            <TouchableOpacity
+              key={type}
+              onPress={() => setSelectedFunctionalType(type)}
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 20,
+                backgroundColor:
+                  selectedFunctionalType === type ? COLORS.primary : "#F3F4F6",
+                marginRight: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    selectedFunctionalType === type
+                      ? COLORS.white
+                      : COLORS.textSecondary,
+                  fontWeight: selectedFunctionalType === type ? "700" : "500",
+                }}
+              >
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {!functionalProducts[selectedFunctionalType] ||
+        functionalProducts[selectedFunctionalType].length === 0 ? (
+          <CuratedLooksSkeleton cardWidth={cardWidth} />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.horizontalScroll}
+          >
+            {functionalProducts[selectedFunctionalType].map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.lookCard,
+                  { width: cardWidth * 0.8, marginRight: 12 },
+                ]}
+                activeOpacity={0.9}
+                onPress={() => handleOpenProduct(item.id)}
+              >
+                <View style={styles.imageWrapper}>
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.lookImage}
+                  />
+                </View>
+                <Text style={styles.lookTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.price}>{formatPrice(item.price)}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
         {/* Trending Now */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Trending Now</Text>
@@ -97,7 +196,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="인기 상품 전체 보기"
           >
-            <Text style={styles.seeAll}>View All</Text>
+            {/* <Text style={styles.seeAll}>View All</Text> */}
           </TouchableOpacity>
         </View>
 
@@ -139,6 +238,98 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
+        {/* Recommended for You */}
+        <View
+          style={[styles.sectionHeader, { marginTop: 24, marginBottom: 8 }]}
+        >
+          <Text style={styles.sectionTitle}>Recommended for You</Text>
+        </View>
+
+        {/* Skin Type Tabs */}
+        {/* <View
+          style={[
+            styles.tabContainer,
+            { justifyContent: "flex-start", gap: 12, marginBottom: 16 },
+          ]}
+        >
+          {[
+            { id: "건성", label: "건성" },
+            { id: "복합성", label: "복합성" },
+            { id: "지성", label: "지성" },
+            { id: "민감", label: "민감성" },
+            { id: "여드름", label: "여드름" },
+            { id: "보습", label: "보습" },
+          ].map((tab) => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[
+                styles.tabItem,
+                recommendSkinType === tab.id && styles.activeTabItem,
+                { paddingHorizontal: 12 },
+              ]}
+              onPress={() => setRecommendSkinType(tab.id)}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  recommendSkinType === tab.id && styles.activeTabText,
+                  { fontSize: 14 },
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View> */}
+
+        <View style={{ minHeight: 280, marginBottom: 32 }}>
+          {recommendLoading ? (
+            <RecommendedSkeleton />
+          ) : recommendedItems.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={[styles.horizontalScroll, { marginBottom: 0 }]} // 중복 마진 제거
+              contentContainerStyle={{ paddingRight: 20 }}
+            >
+              {recommendedItems.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.lookCard, { width: 160, marginRight: 16 }]}
+                  activeOpacity={0.9}
+                  onPress={() => handleOpenProduct(item.id)}
+                >
+                  <View style={[styles.imageWrapper, { height: 160 }]}>
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.lookImage}
+                    />
+                  </View>
+                  <Text
+                    style={[styles.lookTitle, { fontSize: 14 }]}
+                    numberOfLines={1}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={[styles.lookDesc, { fontSize: 12 }]}
+                    numberOfLines={1}
+                  >
+                    {item.desc}
+                  </Text>
+                  <Text style={[styles.price, { fontSize: 14, marginTop: 4 }]}>
+                    {formatPrice(item.price)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={{ paddingLeft: 20, paddingVertical: 20 }}>
+              <Text style={{ color: COLORS.gray }}>추천 상품이 없습니다.</Text>
+            </View>
+          )}
+        </View>
+
         {/* Curated Looks */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Curated Looks</Text>
@@ -173,7 +364,7 @@ export default function HomeScreen() {
 
                 <View style={styles.priceRow}>
                   <Text style={styles.price}>{formatPrice(item.price)}</Text>
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     style={styles.addBtn}
                     accessibilityRole="button"
                     accessibilityLabel="장바구니에 추가"
@@ -184,7 +375,7 @@ export default function HomeScreen() {
                       size={ICON_SIZE.md}
                       color={COLORS.textSecondary}
                     />
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
               </View>
             ))}
@@ -192,7 +383,7 @@ export default function HomeScreen() {
         )}
 
         {/* Bundle Banner */}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.bundleBanner}
           accessibilityRole="button"
           accessibilityLabel="번들 할인 이벤트"
@@ -209,7 +400,7 @@ export default function HomeScreen() {
           <View style={styles.percentCircle}>
             <Text style={styles.percentText}>%</Text>
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </ScrollView>
     </SafeAreaView>
   );
