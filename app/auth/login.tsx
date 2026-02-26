@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
@@ -12,6 +11,7 @@ import { useRouter } from "expo-router";
 import { AuthApi } from "../../libs/api";
 import { getToken, removeToken, setToken } from "../../hooks/useToken";
 import { ErrorModal } from "../../components/ErrorModal";
+
 export default function LoginScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -109,20 +109,23 @@ export default function LoginScreen() {
       {isLoggedIn ? (
         <>
           <Text style={styles.title}>로그아웃</Text>
-          <Text style={{ textAlign: "center", marginBottom: 20 }}>
-            이미 로그인되어 있습니다.
-          </Text>
-          <Button title="로그아웃" onPress={handleLogout} />
+          <Text style={styles.subtitle}>이미 로그인되어 있습니다.</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleLogout}>
+            <Text style={styles.primaryButtonText}>로그아웃</Text>
+          </TouchableOpacity>
         </>
       ) : (
         <>
-          <Text style={styles.title}>로그인</Text>
+          <Text style={styles.title}>Viewty</Text>
+          <Text style={styles.subtitle}>로그인하여 맞춤 추천을 받아보세요</Text>
+
           <TextInput
             style={styles.input}
             placeholder="아이디"
             value={formData.id}
             onChangeText={(value) => handleChange("id", value)}
             autoCapitalize="none"
+            placeholderTextColor="#aaa"
           />
           <TextInput
             style={styles.input}
@@ -130,16 +133,28 @@ export default function LoginScreen() {
             value={formData.password}
             onChangeText={(value) => handleChange("password", value)}
             secureTextEntry
+            placeholderTextColor="#aaa"
           />
+
           {loading ? (
-            <ActivityIndicator size="large" color="#0000ff" />
+            <ActivityIndicator
+              size="large"
+              color="#FF2D78"
+              style={{ marginTop: 10 }}
+            />
           ) : (
-            <Button title="로그인" onPress={handleLogin} />
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleLogin}
+            >
+              <Text style={styles.primaryButtonText}>로그인</Text>
+            </TouchableOpacity>
           )}
+
           <TouchableOpacity onPress={() => router.push("/auth/signup")}>
             <Text style={styles.signupLink}>
               계정이 없으신가요?{" "}
-              <Text style={{ fontWeight: "bold" }}>회원가입</Text>
+              <Text style={styles.signupTextBold}>회원가입</Text>
             </Text>
           </TouchableOpacity>
         </>
@@ -160,31 +175,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    padding: 20,
+    padding: 24,
     backgroundColor: "#fff",
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "bold",
-    marginBottom: 24,
+    marginBottom: 8,
     textAlign: "center",
+    color: "#FF2D78",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 32,
   },
   input: {
-    height: 40,
-    borderColor: "gray",
+    height: 50,
+    borderColor: "#e0e0e0",
     borderWidth: 1,
-    marginBottom: 12,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: "#fafafa",
+    fontSize: 15,
   },
-  errorText: {
-    color: "red",
-    textAlign: "center",
-    marginBottom: 10,
+  primaryButton: {
+    backgroundColor: "#FF2D78",
+    height: 50,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  primaryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   signupLink: {
-    marginTop: 20,
+    marginTop: 24,
     textAlign: "center",
-    color: "blue",
+    color: "#666",
+    fontSize: 14,
+  },
+  signupTextBold: {
+    fontWeight: "bold",
+    color: "#FF2D78",
   },
 });

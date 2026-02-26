@@ -57,7 +57,6 @@ export default function HomeScreen() {
     "피부미백",
   ];
 
-  // 1. 화면 진입 시 한 번만 전체 데이터를 로드합니다.
   useFocusEffect(
     React.useCallback(() => {
       loadCategories();
@@ -67,10 +66,8 @@ export default function HomeScreen() {
     }, [loadCategories, loadProducts, loadRecommendations, recommendSkinType, loadArProducts]),
   );
 
-  // 2. 효능별 탭이 바뀔 때는 '효능별 상품'만 다시 로드합니다.
   React.useEffect(() => {
     FUNCTIONAL_TYPES.forEach((type) => {
-      // 5개 탭의 데이터를 백그라운드에서 조용히 다 받아옵니다.
       loadFunctionalProducts(type);
     });
   }, [loadFunctionalProducts]);
@@ -101,27 +98,9 @@ export default function HomeScreen() {
         onRetry={handleRetry}
       />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="검색"
-          accessibilityHint="상품을 검색합니다"
-        >
-          <Ionicons name="search" size={ICON_SIZE.lg} color={COLORS.black} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>viewty</Text>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="장바구니"
-          accessibilityHint="장바구니로 이동합니다"
-        >
-          <Ionicons
-            name="bag-handle-outline"
-            size={ICON_SIZE.lg}
-            color={COLORS.black}
-          />
-        </TouchableOpacity>
+      {/* Header: 검색, 장바구니 제거 및 Viewty 정가운데 배치 */}
+      <View style={[styles.header, { justifyContent: "center" }]}>
+        <Text style={styles.headerTitle}>Viewty</Text>
       </View>
 
       <ScrollView
@@ -246,15 +225,12 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
-        {/* Trending Now */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Trending Now</Text>
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel="인기 상품 전체 보기"
-          >
-            {/* <Text style={styles.seeAll}>View All</Text> */}
-          </TouchableOpacity>
+          ></TouchableOpacity>
         </View>
 
         {trendingItems.length === 0 ? (
@@ -295,49 +271,11 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
-        {/* Recommended for You */}
         <View
           style={[styles.sectionHeader, { marginTop: 24, marginBottom: 8 }]}
         >
           <Text style={styles.sectionTitle}>Recommended for You</Text>
         </View>
-
-        {/* Skin Type Tabs */}
-        {/* <View
-          style={[
-            styles.tabContainer,
-            { justifyContent: "flex-start", gap: 12, marginBottom: 16 },
-          ]}
-        >
-          {[
-            { id: "건성", label: "건성" },
-            { id: "복합성", label: "복합성" },
-            { id: "지성", label: "지성" },
-            { id: "민감", label: "민감성" },
-            { id: "여드름", label: "여드름" },
-            { id: "보습", label: "보습" },
-          ].map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[
-                styles.tabItem,
-                recommendSkinType === tab.id && styles.activeTabItem,
-                { paddingHorizontal: 12 },
-              ]}
-              onPress={() => setRecommendSkinType(tab.id)}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  recommendSkinType === tab.id && styles.activeTabText,
-                  { fontSize: 14 },
-                ]}
-              >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View> */}
 
         <View style={{ minHeight: 280, marginBottom: 32 }}>
           {recommendLoading ? (
@@ -346,7 +284,7 @@ export default function HomeScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={[styles.horizontalScroll, { marginBottom: 0 }]} // 중복 마진 제거
+              style={[styles.horizontalScroll, { marginBottom: 0 }]}
               contentContainerStyle={{ paddingRight: 20 }}
             >
               {recommendedItems.map((item) => (
@@ -387,7 +325,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Curated Looks */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Curated Looks</Text>
         </View>
@@ -421,43 +358,11 @@ export default function HomeScreen() {
 
                 <View style={styles.priceRow}>
                   <Text style={styles.price}>{formatPrice(item.price)}</Text>
-                  {/* <TouchableOpacity
-                    style={styles.addBtn}
-                    accessibilityRole="button"
-                    accessibilityLabel="장바구니에 추가"
-                    accessibilityHint={`${item.title}을 장바구니에 담습니다`}
-                  >
-                    <Ionicons
-                      name="add"
-                      size={ICON_SIZE.md}
-                      color={COLORS.textSecondary}
-                    />
-                  </TouchableOpacity> */}
                 </View>
               </View>
             ))}
           </View>
         )}
-
-        {/* Bundle Banner */}
-        {/* <TouchableOpacity
-          style={styles.bundleBanner}
-          accessibilityRole="button"
-          accessibilityLabel="번들 할인 이벤트"
-          accessibilityHint="3개 이상 구매 시 20% 할인"
-        >
-          <View>
-            <Text style={styles.bundleSub}>BUNDLE & SAVE</Text>
-            <Text style={styles.bundleTitle}>
-              Buy any 3 looks, get{" "}
-              <Text style={styles.primaryHighlight}>20% OFF</Text>
-              {"\n"}your total kit.
-            </Text>
-          </View>
-          <View style={styles.percentCircle}>
-            <Text style={styles.percentText}>%</Text>
-          </View>
-        </TouchableOpacity> */}
       </ScrollView>
     </SafeAreaView>
   );
