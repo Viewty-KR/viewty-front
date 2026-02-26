@@ -14,6 +14,7 @@ interface UseProductsReturn {
   recommendedItems: LookItem[];
   curatedLooks: LookItem[];
   functionalProducts: Record<string, LookItem[]>;
+  arProducts: LookItem[];
   errorMessage: string | null;
   loading: boolean;
   recommendLoading: boolean;
@@ -29,6 +30,7 @@ interface UseProductsReturn {
   loadRecommendations: (skinType: string) => Promise<void>;
   loadCategories: () => Promise<void>;
   loadFunctionalProducts: (type: string) => Promise<void>;
+  loadArProducts: () => Promise<void>;
   handleRetry: () => void;
   handleCloseError: () => void;
 }
@@ -39,7 +41,10 @@ export const useProducts = (): UseProductsReturn => {
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
   const [recommendedItems, setRecommendedItems] = useState<LookItem[]>([]);
   const [curatedLooks, setCuratedLooks] = useState<LookItem[]>([]);
-  const [functionalProducts, setFunctionalProducts] = useState<Record<string, LookItem[]>>({});
+  const [functionalProducts, setFunctionalProducts] = useState<
+    Record<string, LookItem[]>
+  >({});
+  const [arProducts, setArProducts] = useState<LookItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [recommendLoading, setRecommendLoading] = useState(false);
@@ -158,13 +163,30 @@ export const useProducts = (): UseProductsReturn => {
       if (response?.success) {
         const rawList = extractProducts(response.data);
         const curated = rawList.map(mapToLook);
-        setFunctionalProducts(prev => ({
+        setFunctionalProducts((prev) => ({
           ...prev,
-          [type]: curated
+          [type]: curated,
         }));
       }
     } catch (error) {
       console.error(`효능별(${type}) 상품 로딩 실패:`, error);
+    }
+  }, []);
+
+  /**
+   * AR 체험 가능 상품 로드
+   */
+  const loadArProducts = useCallback(async () => {
+    try {
+      const response = await ProductApi.getArProducts("", 0, 20);
+
+      if (response?.success) {
+        const rawList = extractProducts(response.data);
+        const arItems = rawList.map(mapToLook);
+        setArProducts(arItems);
+      }
+    } catch (error) {
+      console.error("AR 상품 로딩 실패:", error);
     }
   }, []);
 
@@ -212,6 +234,7 @@ export const useProducts = (): UseProductsReturn => {
     recommendedItems,
     curatedLooks,
     functionalProducts,
+    arProducts,
     errorMessage,
     loading,
     recommendLoading,
@@ -226,6 +249,7 @@ export const useProducts = (): UseProductsReturn => {
     loadRecommendations,
     loadCategories,
     loadFunctionalProducts,
+    loadArProducts,
     handleRetry,
     handleCloseError,
     recommendSkinType,
