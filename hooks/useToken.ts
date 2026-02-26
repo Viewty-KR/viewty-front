@@ -31,5 +31,5 @@ export const removeToken = async () => {
   } else {
     await SecureStore.deleteItemAsync("userToken");
   }
-  router.replace("/");
+  router.replace("/auth/login");
 };
