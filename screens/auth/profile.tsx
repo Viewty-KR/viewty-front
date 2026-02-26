@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   ScrollView,
   TextInput,
-  Button,
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
@@ -22,7 +21,7 @@ const LogoutButton = () => {
   const { handleLogout } = useLogout();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
-  
+
   return (
     <>
       <TouchableOpacity
@@ -74,13 +73,13 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
   } = profileData;
 
   return (
-    <>
+    <View style={{ paddingBottom: 40 }}>
       {userData && (
         <View style={profileStyles.section}>
           <Text style={profileStyles.sectionTitle}>회원 정보</Text>
-          <Text>아이디: {userData.userId}</Text>
-          <Text>이메일: {userData.email}</Text>
-          <Text>이름: {userData.name}</Text>
+          <Text style={profileStyles.infoText}>아이디: {userData.userId}</Text>
+          <Text style={profileStyles.infoText}>이메일: {userData.email}</Text>
+          <Text style={profileStyles.infoText}>이름: {userData.name}</Text>
         </View>
       )}
 
@@ -92,6 +91,7 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          placeholderTextColor="#aaa"
         />
         <TextInput
           style={profileStyles.input}
@@ -99,12 +99,15 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
           value={passwordConfirm}
           onChangeText={setPasswordConfirm}
           secureTextEntry
+          placeholderTextColor="#aaa"
         />
-        <Button
-          title="비밀번호 변경"
+        <TouchableOpacity
+          style={profileStyles.actionButton}
           onPress={handlePasswordUpdate}
           disabled={passwordUpdateLoading}
-        />
+        >
+          <Text style={profileStyles.actionButtonText}>비밀번호 변경</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={profileStyles.section}>
@@ -123,16 +126,15 @@ const MemberInfo = ({ profileData }: { profileData: ProfileHookResult }) => {
           selectedPoreSize={selectedPoreSize}
           setSelectedPoreSize={setSelectedPoreSize}
         />
-      </View>
-
-      <View style={profileStyles.section}>
-        <Button
-          title="피부 설문 수정"
+        <TouchableOpacity
+          style={[profileStyles.actionButton, { backgroundColor: "#FF2D78" }]}
           onPress={handleUpdate}
           disabled={loading}
-        />
+        >
+          <Text style={profileStyles.actionButtonText}>설문 정보 저장</Text>
+        </TouchableOpacity>
       </View>
-    </>
+    </View>
   );
 };
 
@@ -154,30 +156,42 @@ const ProfileHeader = ({
         style={[styles.tab, activeTab === "info" && styles.activeTab]}
         onPress={() => setActiveTab("info")}
         accessibilityRole="tab"
-        accessibilityLabel="회원정보 탭"
-        accessibilityState={{ selected: activeTab === "info" }}
       >
-        <Text style={styles.tabText}>회원정보</Text>
+        <Text
+          style={[styles.tabText, activeTab === "info" && styles.activeTabText]}
+        >
+          회원정보
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.tab, activeTab === "bookmarklist" && styles.activeTab]}
         onPress={() => setActiveTab("bookmarklist")}
         accessibilityRole="tab"
-        accessibilityLabel="내가 찜한 목록 탭"
-        accessibilityState={{ selected: activeTab === "bookmarklist" }}
       >
-        <Text style={styles.tabText}>내가 찜한 목록</Text>
+        <Text
+          style={[
+            styles.tabText,
+            activeTab === "bookmarklist" && styles.activeTabText,
+          ]}
+        >
+          찜한 상품
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.tab, activeTab === "reviews" && styles.activeTab]}
         onPress={() => setActiveTab("reviews")}
         accessibilityRole="tab"
-        accessibilityLabel="내가 작성한 리뷰 탭"
-        accessibilityState={{ selected: activeTab === "reviews" }}
       >
-        <Text style={styles.tabText}>내가 작성한 리뷰</Text>
+        <Text
+          style={[
+            styles.tabText,
+            activeTab === "reviews" && styles.activeTabText,
+          ]}
+        >
+          나의 리뷰
+        </Text>
       </TouchableOpacity>
     </View>
   </>
@@ -190,8 +204,7 @@ export default function ProfileScreen() {
   if (profileData.loading && !profileData.userData) {
     return (
       <View style={profileStyles.centered}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text>데이터 로딩 중...</Text>
+        <ActivityIndicator size="large" color="#FF2D78" />
       </View>
     );
   }
@@ -206,23 +219,16 @@ export default function ProfileScreen() {
 
   return (
     <>
-      {activeTab === "info" ? (
-        <ScrollView style={profileStyles.container}>
-          <ProfileHeader activeTab={activeTab} setActiveTab={setActiveTab} />
-          <MemberInfo profileData={profileData} />
-          {!profileData.userData && !profileData.loading && (
-            <View style={profileStyles.centered}>
-              <Text>표시할 데이터가 없습니다.</Text>
-            </View>
-          )}
-        </ScrollView>
-      ) : (
-        <View style={profileStyles.container}>
-          <ProfileHeader activeTab={activeTab} setActiveTab={setActiveTab} />
-          {activeTab === "bookmarklist" && <BookmarkList />}
-          {activeTab === "reviews" && <MyReviews />}
-        </View>
-      )}
+      <View style={profileStyles.container}>
+        <ProfileHeader activeTab={activeTab} setActiveTab={setActiveTab} />
+        {activeTab === "info" && (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <MemberInfo profileData={profileData} />
+          </ScrollView>
+        )}
+        {activeTab === "bookmarklist" && <BookmarkList />}
+        {activeTab === "reviews" && <MyReviews />}
+      </View>
       <ErrorModal
         visible={profileData.isModalVisible}
         type={profileData.modalType}
@@ -238,19 +244,25 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#f0f0f0",
-    paddingVertical: 10,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
   },
   tab: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: "center",
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: "#007AFF",
+    borderBottomColor: "#FF2D78",
   },
   tabText: {
-    fontWeight: "bold",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#888",
+  },
+  activeTabText: {
+    color: "#FF2D78",
   },
 });

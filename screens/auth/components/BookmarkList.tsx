@@ -18,8 +18,7 @@ const BookmarkList = () => {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text>찜 목록을 불러오는 중...</Text>
+        <ActivityIndicator size="large" color="#FF2D78" />
       </View>
     );
   }
@@ -35,7 +34,7 @@ const BookmarkList = () => {
   if (bookmarkList.length === 0) {
     return (
       <View style={styles.centered}>
-        <Text>찜한 상품이 없습니다.</Text>
+        <Text style={styles.emptyText}>찜한 상품이 없습니다.</Text>
       </View>
     );
   }
@@ -43,6 +42,7 @@ const BookmarkList = () => {
   const renderItem = ({ item }: { item: BookmarkItem }) => (
     <TouchableOpacity
       style={styles.itemContainer}
+      activeOpacity={0.8}
       onPress={() => router.push(`/product/${item.productId}`)}
     >
       <Image
@@ -52,9 +52,12 @@ const BookmarkList = () => {
             "https://via.placeholder.com/150?text=No+Image",
         }}
         style={styles.itemImage}
+        resizeMode="contain"
       />
       <View style={styles.itemDetails}>
-        <Text style={styles.itemName}>{item.productName}</Text>
+        <Text style={styles.itemName} numberOfLines={2}>
+          {item.productName}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -65,6 +68,7 @@ const BookmarkList = () => {
       renderItem={renderItem}
       keyExtractor={(item) => item.bookmarkId.toString()}
       contentContainerStyle={styles.listContainer}
+      showsVerticalScrollIndicator={false}
     />
   );
 };
@@ -76,35 +80,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
+  emptyText: {
+    fontSize: 15,
+    color: "#888",
+  },
   errorText: {
     color: "red",
     textAlign: "center",
   },
   listContainer: {
-    padding: 10,
+    padding: 16,
   },
   itemContainer: {
     flexDirection: "row",
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: "#eee",
     alignItems: "center",
   },
   itemImage: {
-    width: 60,
-    height: 60,
+    width: 70,
+    height: 70,
     borderRadius: 8,
-    marginRight: 10,
+    backgroundColor: "#f9f9f9",
+    marginRight: 14,
   },
   itemDetails: {
     flex: 1,
+    justifyContent: "center",
   },
   itemName: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+    lineHeight: 20,
   },
 });
 

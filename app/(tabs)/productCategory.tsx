@@ -6,6 +6,7 @@ import {
   FlatList,
   Image,
   ListRenderItem,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -41,7 +42,6 @@ export default function ProductCategoryScreen() {
     loadCategories,
   } = useProducts();
 
-  // 화면이 포커스될 때만 데이터 로드
   useFocusEffect(
     React.useCallback(() => {
       loadCategories();
@@ -49,7 +49,6 @@ export default function ProductCategoryScreen() {
     }, [loadCategories, loadProducts]),
   );
 
-  // "전체" 카테고리를 포함한 목록
   const allCategories = useMemo(() => {
     return [{ id: null, name: "전체" }, ...categories];
   }, [categories]);
@@ -69,21 +68,22 @@ export default function ProductCategoryScreen() {
       onPress={() => router.push(`/product/${item.id}`)}
     >
       <View style={styles.imageContainer}>
-        <Image 
-          source={{ uri: getSafeImageUrl(item.imgUrl) }} 
-          style={styles.productImage} 
+        <Image
+          source={{ uri: getSafeImageUrl(item.imgUrl) }}
+          style={styles.productImage}
           resizeMode="contain"
         />
         {item.arAvailable && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.arBadge}
             onPress={(e) => {
               e.stopPropagation();
               router.push(`/ar/${item.id}`);
             }}
-            activeOpacity={0.7}
+            activeOpacity={0.9}
           >
-            <Text style={styles.arBadgeText}>AR체험</Text>
+            <Ionicons name="camera" size={14} color="#FF2D78" />
+            <Text style={styles.arBadgeText}>Try On</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -97,7 +97,6 @@ export default function ProductCategoryScreen() {
     </TouchableOpacity>
   );
 
-  // 페이지네이션 번호 생성
   const renderPagination = () => {
     if (totalPages <= 1) return null;
 
@@ -168,7 +167,6 @@ export default function ProductCategoryScreen() {
       <Stack.Screen options={{ title: "카테고리" }} />
 
       <View style={styles.contentWrapper}>
-        {/* 1. 왼쪽 사이드바 영역 (화해 스타일) */}
         <View style={styles.sidebar}>
           <ScrollView showsVerticalScrollIndicator={false}>
             {allCategories.map((cat) => {
@@ -196,7 +194,6 @@ export default function ProductCategoryScreen() {
           </ScrollView>
         </View>
 
-        {/* 2. 오른쪽 메인 상품 목록 영역 */}
         <View style={styles.mainArea}>
           <View style={styles.totalCountContainer}>
             <Text style={styles.totalCountText}>
@@ -236,16 +233,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
 
-  // 💡 [핵심] 가로로 화면 분할
   contentWrapper: {
     flex: 1,
     flexDirection: "row",
   },
 
-  // 💡 왼쪽 카테고리 사이드바
   sidebar: {
-    width: 110, // 사이드바 고정 너비
-    backgroundColor: "#F7F7F7", // 기본적으로 살짝 회색 배경
+    width: 110,
+    backgroundColor: "#F7F7F7",
     borderRightWidth: 1,
     borderRightColor: "#EEE",
   },
@@ -254,21 +249,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   sidebarItemActive: {
-    backgroundColor: "#fff", // 선택된 것은 하얗게 뚫린 느낌
+    backgroundColor: "#fff",
     borderRightWidth: 1,
-    borderRightColor: "#fff", // 우측 선을 흰색으로 가려서 열린 느낌 주기
-    marginLeft: -1, // 테두리 겹침 방지
+    borderRightColor: "#fff",
+    marginLeft: -1,
   },
   sidebarText: {
     fontSize: 14,
-    color: "#777", // 비활성 글씨
+    color: "#777",
   },
   sidebarTextActive: {
-    color: "#333", // 활성 글씨
+    color: "#333",
     fontWeight: "bold",
   },
 
-  // 💡 오른쪽 상품 영역
   mainArea: {
     flex: 1,
     backgroundColor: "#fff",
@@ -291,7 +285,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    width: "48%", // 2열 표시
+    width: "48%",
     marginBottom: 20,
     backgroundColor: "#fff",
   },
@@ -306,19 +300,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     marginBottom: 8,
   },
+
+  // 홈 화면과 완벽히 통일된 둥근 테두리의 흰 바탕 핑크 텍스트 UI
   arBadge: {
     position: "absolute",
-    top: 8,
-    left: 8,
-    backgroundColor: "#FF2D78",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    bottom: 12,
+    right: 12,
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   arBadgeText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#FF2D78",
+    marginLeft: 4,
   },
   cardContent: {
     paddingHorizontal: 4,
@@ -333,7 +337,6 @@ const styles = StyleSheet.create({
   },
   price: { fontSize: 15, fontWeight: "bold", color: "#333" },
 
-  // 페이지네이션
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",

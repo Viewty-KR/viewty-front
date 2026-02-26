@@ -3,9 +3,12 @@ import {
   View,
   Text,
   TextInput,
-  Button,
+  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { AuthApi } from "../../libs/api";
@@ -109,50 +112,108 @@ export default function SignupScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>회원가입</Text>
-      <View style={styles.inputWithButtonContainer}>
-        <TextInput
-          style={[styles.input, styles.idInput]}
-          placeholder="아이디"
-          value={formData.id}
-          onChangeText={(value) => handleChange("id", value)}
-          autoCapitalize="none"
-        />
-      </View>
-      <TextInput
-        style={styles.input}
-        placeholder="이메일"
-        value={formData.email}
-        onChangeText={(value) => handleChange("email", value)}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="이름"
-        value={formData.name}
-        onChangeText={(value) => handleChange("name", value)}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="비밀번호"
-        value={formData.password}
-        onChangeText={(value) => handleChange("password", value)}
-        secureTextEntry
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="비밀번호 확인"
-        value={formData.passwordConfirm}
-        onChangeText={(value) => handleChange("passwordConfirm", value)}
-        secureTextEntry
-      />
-      {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
-      ) : (
-        <Button title="가입" onPress={handleSubmit} />
-      )}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>회원가입</Text>
+          <Text style={styles.subtitle}>
+            Viewty에서 나만의 화장품을 찾아보세요
+          </Text>
+        </View>
+
+        {/* 폼 영역을 연한 테두리 박스로 감싸 마이페이지와 통일감 부여 */}
+        <View style={styles.section}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>아이디</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="아이디를 입력해주세요"
+              placeholderTextColor="#aaa"
+              value={formData.id}
+              onChangeText={(value) => handleChange("id", value)}
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>이메일</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="example@viewty.com"
+              placeholderTextColor="#aaa"
+              value={formData.email}
+              onChangeText={(value) => handleChange("email", value)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>이름</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="이름을 입력해주세요"
+              placeholderTextColor="#aaa"
+              value={formData.name}
+              onChangeText={(value) => handleChange("name", value)}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>비밀번호</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="비밀번호를 입력해주세요"
+              placeholderTextColor="#aaa"
+              value={formData.password}
+              onChangeText={(value) => handleChange("password", value)}
+              secureTextEntry
+            />
+          </View>
+
+          <View style={[styles.inputGroup, { marginBottom: 0 }]}>
+            <Text style={styles.inputLabel}>비밀번호 확인</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="비밀번호를 다시 입력해주세요"
+              placeholderTextColor="#aaa"
+              value={formData.passwordConfirm}
+              onChangeText={(value) => handleChange("passwordConfirm", value)}
+              secureTextEntry
+            />
+          </View>
+        </View>
+
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#FF2D78"
+            style={{ marginTop: 10 }}
+          />
+        ) : (
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.submitButtonText}>가입하기</Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.footerTextContainer}>
+          <Text style={styles.footerText}>이미 계정이 있으신가요?</Text>
+          <TouchableOpacity onPress={() => router.push("/auth/login")}>
+            <Text style={styles.loginLink}>로그인</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
       <ErrorModal
         visible={modalVisible}
         type="alert"
@@ -160,47 +221,87 @@ export default function SignupScreen() {
         message={modalMessage}
         onRetry={handleModalConfirm}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 20,
     backgroundColor: "#fff",
+  },
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 40,
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+  headerContainer: {
+    marginBottom: 32,
+    alignItems: "center",
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
+    color: "#333",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#666",
+  },
+  section: {
     marginBottom: 24,
-    textAlign: "center",
+    padding: 20,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 13,
+    color: "#555",
+    marginBottom: 8,
+    fontWeight: "600",
   },
   input: {
-    height: 40,
-    borderColor: "gray",
+    height: 48,
+    borderColor: "#e0e0e0",
     borderWidth: 1,
-    marginBottom: 12,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    backgroundColor: "#fafafa",
+    fontSize: 15,
+    color: "#333",
   },
-  inputWithButtonContainer: {
-    flexDirection: "row",
+  submitButton: {
+    backgroundColor: "#FF2D78",
+    paddingVertical: 14,
+    borderRadius: 8,
     alignItems: "center",
-    marginBottom: 12,
+    marginTop: 8,
   },
-  idInput: {
-    flex: 1,
-    marginBottom: 0,
-    marginRight: 10,
+  submitButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
-  errorText: {
-    color: "red",
-    textAlign: "center",
-    marginBottom: 10,
+  footerTextContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 24,
   },
-  successText: {
-    color: "green",
+  footerText: {
+    color: "#666",
+    fontSize: 14,
+  },
+  loginLink: {
+    color: "#FF2D78",
+    fontSize: 14,
+    fontWeight: "bold",
+    marginLeft: 6,
   },
 });
