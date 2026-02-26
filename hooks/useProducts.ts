@@ -178,7 +178,7 @@ export const useProducts = (): UseProductsReturn => {
    */
   const loadArProducts = useCallback(async () => {
     try {
-      const response = await ProductApi.getArProducts("", 0, 20);
+      const response = await ProductApi.getArProducts();
 
       if (response?.success) {
         const rawList = extractProducts(response.data);
