@@ -303,6 +303,14 @@ export const ProductApi = {
   // 카테고리 목록 조회
   getCategories: () =>
     fetchClient<CategoryListResponse>("/products/categories"),
+  // 추천 상품 목록 조회
+  getRecommend: (page = 0, size = 20, keyword?: string) => {
+    let url = `/products/recommend?page=${page}&size=${size}`;
+    if (keyword) {
+      url += `&keyword=${keyword}`;
+    }
+    return fetchClient<ProductListResponse>(url);
+  },
 };
 
 export const ReviewApi = {
