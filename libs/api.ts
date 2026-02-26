@@ -27,9 +27,11 @@ const resolveBaseUrl = () => {
     return configuredUrl.replace(/\/$/, "");
   } else {
     if (Platform.OS === "android") {
-      return "http://10.0.2.2:8080/api";
+      return (
+        process.env.ANDROID_API_BASE_URL || "http://192.168.101.83:8080/api"
+      );
     } else {
-      return "http://localhost:8080/api";
+      return process.env.API_BASE_URL || "http://localhost:8080/api";
     }
   }
 };
@@ -311,6 +313,11 @@ export const ProductApi = {
     }
     return fetchClient<ProductListResponse>(url);
   },
+  // 효능별 상품 목록 조회
+  getFunctionalList: (type: string, page = 0, size = 20) =>
+    fetchClient<ProductListResponse>(
+      `/products/functional?type=${encodeURIComponent(type)}&page=${page}&size=${size}`,
+    ),
 };
 
 export const ReviewApi = {
