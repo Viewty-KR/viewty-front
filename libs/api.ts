@@ -6,10 +6,10 @@ import { getToken, removeToken } from "../hooks/useToken";
 const resolveBaseUrl = () => {
   const expoExtra =
     (Constants.expoConfig?.extra as
-      | { apiBaseUrl?: string, androidApiBaseUrl?: string }
+      | { apiBaseUrl?: string; androidApiBaseUrl?: string }
       | undefined) ??
     (Constants.manifest2?.extra as
-      | { apiBaseUrl?: string, androidApiBaseUrl?: string }
+      | { apiBaseUrl?: string; androidApiBaseUrl?: string }
       | undefined);
 
   let configuredUrl = null;
@@ -318,6 +318,9 @@ export const ProductApi = {
     fetchClient<ProductListResponse>(
       `/products/functional?type=${encodeURIComponent(type)}&page=${page}&size=${size}`,
     ),
+  // AR 체험 가능 상품 목록 조회
+  getArProducts: () =>
+    fetchClient<ProductListResponse>(`/products/ar-products`),
 };
 
 export const ReviewApi = {

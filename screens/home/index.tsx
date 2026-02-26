@@ -32,6 +32,7 @@ export default function HomeScreen() {
     recommendedItems,
     curatedLooks,
     functionalProducts,
+    arProducts,
     errorMessage,
     recommendSkinType,
     recommendLoading,
@@ -42,6 +43,7 @@ export default function HomeScreen() {
     loadRecommendations,
     loadCategories,
     loadFunctionalProducts,
+    loadArProducts,
   } = useProducts();
 
   const [selectedFunctionalType, setSelectedFunctionalType] =
@@ -61,7 +63,8 @@ export default function HomeScreen() {
       loadCategories();
       loadProducts();
       loadRecommendations(recommendSkinType);
-    }, [loadCategories, loadProducts, loadRecommendations, recommendSkinType]),
+      loadArProducts(); // AR 상품 로드 추가
+    }, [loadCategories, loadProducts, loadRecommendations, recommendSkinType, loadArProducts]),
   );
 
   // 2. 효능별 탭이 바뀔 때는 '효능별 상품'만 다시 로드합니다.
@@ -75,6 +78,13 @@ export default function HomeScreen() {
   const handleOpenProduct = (productId: number | string) => {
     router.push({
       pathname: "/product/[id]",
+      params: { id: String(productId) },
+    });
+  };
+
+  const handleOpenAR = (productId: number | string) => {
+    router.push({
+      pathname: "/ar/[id]",
       params: { id: String(productId) },
     });
   };
@@ -118,6 +128,53 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContentContainer}
       >
+        {/* AR Experience Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>AR 가상 체험</Text>
+        </View>
+
+        {arProducts.length === 0 ? (
+          <CuratedLooksSkeleton cardWidth={cardWidth} />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.horizontalScroll}
+          >
+            {arProducts.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.lookCard,
+                  { width: cardWidth * 1.1, marginRight: 12 },
+                ]}
+                activeOpacity={0.9}
+                onPress={() => handleOpenProduct(item.id)}
+              >
+                <View style={styles.imageWrapper}>
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.lookImage}
+                  />
+                  <TouchableOpacity 
+                    style={styles.tryOnBadge}
+                    onPress={() => handleOpenAR(item.id)}
+                  >
+                    <Ionicons name="camera" size={14} color={COLORS.primary} />
+                    <Text style={styles.tryOnText}>Try On</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.lookTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.lookDesc} numberOfLines={1}>
+                  {item.desc}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
         {/* Functional Tabs Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>효능별 추천</Text>
