@@ -19,15 +19,6 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="house.fill" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="productCategory"
         options={{
           title: "Category",
@@ -37,16 +28,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="index"
         options={{
-          title: "explore",
+          title: "Home",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
+            <IconSymbol size={28} name="house.fill" color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="profile-redirect"
+        name="profile"
         options={{
           title: "My Page",
           tabBarIcon: ({ color }) => (
@@ -56,12 +47,6 @@ export default function TabLayout() {
               color={color}
             />
           ),
-        }}
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            router.push("/auth/profile");
-          },
         }}
       />
     </Tabs>

@@ -31,6 +31,7 @@ export default function HomeScreen() {
     trendingItems,
     recommendedItems,
     curatedLooks,
+    functionalProducts,
     errorMessage,
     recommendSkinType,
     recommendLoading,
@@ -40,16 +41,36 @@ export default function HomeScreen() {
     loadProducts,
     loadRecommendations,
     loadCategories,
+    loadFunctionalProducts,
   } = useProducts();
 
-  // 화면이 포커스될 때만 데이터 로드
+  const [selectedFunctionalType, setSelectedFunctionalType] =
+    React.useState("주름개선");
+
+  const FUNCTIONAL_TYPES = [
+    "주름개선",
+    "수렴진정",
+    "피부보호",
+    "피부보습",
+    "피부미백",
+  ];
+
+  // 1. 화면 진입 시 한 번만 전체 데이터를 로드합니다.
   useFocusEffect(
     React.useCallback(() => {
       loadCategories();
       loadProducts();
       loadRecommendations(recommendSkinType);
-    }, [loadCategories, loadProducts, loadRecommendations]),
+    }, [loadCategories, loadProducts, loadRecommendations, recommendSkinType]),
   );
+
+  // 2. 효능별 탭이 바뀔 때는 '효능별 상품'만 다시 로드합니다.
+  React.useEffect(() => {
+    FUNCTIONAL_TYPES.forEach((type) => {
+      // 5개 탭의 데이터를 백그라운드에서 조용히 다 받아옵니다.
+      loadFunctionalProducts(type);
+    });
+  }, [loadFunctionalProducts]);
 
   const handleOpenProduct = (productId: number | string) => {
     router.push({
@@ -97,6 +118,77 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContentContainer}
       >
+        {/* Functional Tabs Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>효능별 추천</Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 15, paddingLeft: 16 }}
+        >
+          {FUNCTIONAL_TYPES.map((type) => (
+            <TouchableOpacity
+              key={type}
+              onPress={() => setSelectedFunctionalType(type)}
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 20,
+                backgroundColor:
+                  selectedFunctionalType === type ? COLORS.primary : "#F3F4F6",
+                marginRight: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    selectedFunctionalType === type
+                      ? COLORS.white
+                      : COLORS.textSecondary,
+                  fontWeight: selectedFunctionalType === type ? "700" : "500",
+                }}
+              >
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {!functionalProducts[selectedFunctionalType] ||
+        functionalProducts[selectedFunctionalType].length === 0 ? (
+          <CuratedLooksSkeleton cardWidth={cardWidth} />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.horizontalScroll}
+          >
+            {functionalProducts[selectedFunctionalType].map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.lookCard,
+                  { width: cardWidth * 0.8, marginRight: 12 },
+                ]}
+                activeOpacity={0.9}
+                onPress={() => handleOpenProduct(item.id)}
+              >
+                <View style={styles.imageWrapper}>
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.lookImage}
+                  />
+                </View>
+                <Text style={styles.lookTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.price}>{formatPrice(item.price)}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
         {/* Trending Now */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Trending Now</Text>

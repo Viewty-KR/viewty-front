@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config();
 
 module.exports = {
   expo: {
@@ -14,6 +14,7 @@ module.exports = {
       supportsTablet: true,
     },
     android: {
+      package: "com.viewty.app",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -29,6 +30,16 @@ module.exports = {
     },
     plugins: [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          android: {
+            compileSdkVersion: 35,
+            targetSdkVersion: 35,
+            minSdkVersion: 24,
+          },
+        },
+      ],
       [
         "expo-splash-screen",
         {

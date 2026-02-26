@@ -13,6 +13,7 @@ interface UseProductsReturn {
   trendingItems: TrendingItem[];
   recommendedItems: LookItem[];
   curatedLooks: LookItem[];
+  functionalProducts: Record<string, LookItem[]>;
   errorMessage: string | null;
   loading: boolean;
   recommendLoading: boolean;
@@ -27,6 +28,7 @@ interface UseProductsReturn {
   loadProducts: () => Promise<void>;
   loadRecommendations: (skinType: string) => Promise<void>;
   loadCategories: () => Promise<void>;
+  loadFunctionalProducts: (type: string) => Promise<void>;
   handleRetry: () => void;
   handleCloseError: () => void;
 }
@@ -37,6 +39,7 @@ export const useProducts = (): UseProductsReturn => {
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
   const [recommendedItems, setRecommendedItems] = useState<LookItem[]>([]);
   const [curatedLooks, setCuratedLooks] = useState<LookItem[]>([]);
+  const [functionalProducts, setFunctionalProducts] = useState<Record<string, LookItem[]>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [recommendLoading, setRecommendLoading] = useState(false);
@@ -144,7 +147,35 @@ export const useProducts = (): UseProductsReturn => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, selectedCategory]);
+  }, [currentPage, selectedCategory]); // 의존성 배열에 currentPage와 selectedCategory 추가
+
+  /**
+   * 효능별 상품 로드
+   */
+  const loadFunctionalProducts = useCallback(async (type: string) => {
+    try {
+      const response = await ProductApi.getFunctionalList(type, 0, 10);
+      if (response?.success) {
+        const rawList = extractProducts(response.data);
+        const curated = rawList.map(mapToLook);
+        setFunctionalProducts(prev => ({
+          ...prev,
+          [type]: curated
+        }));
+      }
+    } catch (error) {
+      console.error(`효능별(${type}) 상품 로딩 실패:`, error);
+    }
+  }, []);
+
+  // useEffect 제거 - 이제 각 화면에서 필요할 때만 명시적으로 호출
+  // useEffect(() => {
+  //   loadCategories();
+  // }, [loadCategories]);
+
+  // useEffect(() => {
+  //   loadProducts();
+  // }, [loadProducts]);
 
   const setCategory = (id: number | null) => {
     setSelectedCategory(id);
@@ -180,6 +211,7 @@ export const useProducts = (): UseProductsReturn => {
     trendingItems,
     recommendedItems,
     curatedLooks,
+    functionalProducts,
     errorMessage,
     loading,
     recommendLoading,
@@ -193,6 +225,7 @@ export const useProducts = (): UseProductsReturn => {
     loadProducts,
     loadRecommendations,
     loadCategories,
+    loadFunctionalProducts,
     handleRetry,
     handleCloseError,
     recommendSkinType,
