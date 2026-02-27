@@ -63,7 +63,13 @@ export default function HomeScreen() {
       loadProducts();
       loadRecommendations(recommendSkinType);
       loadArProducts(); // AR 상품 로드 추가
-    }, [loadCategories, loadProducts, loadRecommendations, recommendSkinType, loadArProducts]),
+    }, [
+      loadCategories,
+      loadProducts,
+      loadRecommendations,
+      recommendSkinType,
+      loadArProducts,
+    ]),
   );
 
   React.useEffect(() => {
@@ -135,7 +141,7 @@ export default function HomeScreen() {
                     source={{ uri: item.image }}
                     style={styles.lookImage}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.tryOnBadge}
                     onPress={() => handleOpenAR(item.id)}
                   >
@@ -226,7 +232,7 @@ export default function HomeScreen() {
         )}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Trending Now</Text>
+          <Text style={styles.sectionTitle}>지금 주목할만한 인기 상품</Text>
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel="인기 상품 전체 보기"
@@ -274,7 +280,7 @@ export default function HomeScreen() {
         <View
           style={[styles.sectionHeader, { marginTop: 24, marginBottom: 8 }]}
         >
-          <Text style={styles.sectionTitle}>Recommended for You</Text>
+          <Text style={styles.sectionTitle}>맞춤 추천 상품</Text>
         </View>
 
         <View style={{ minHeight: 280, marginBottom: 32 }}>
