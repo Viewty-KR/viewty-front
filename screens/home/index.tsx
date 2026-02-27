@@ -332,7 +332,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Curated Looks</Text>
+          <Text style={styles.sectionTitle}>엄선된 상품</Text>
         </View>
 
         {curatedLooks.length === 0 ? (
